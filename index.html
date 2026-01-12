@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Tenebris Ledger</title>
+<meta name="theme-color" content="#0b0710">
+<style>
+/*
+  ==============================================
+  ПЕРЕМЕННЫЕ И ОСНОВНОЙ СТИЛЬ
+  ==============================================
+  */
+  :root{
+    --bg:#08060a; /* Более глубокий темный фон */
+    --card:#141216; /* Фон карточек */
+    --text:#f0f0f0; /* Основной текст */
+    --muted:#a99bb3; /* Приглушенный текст */
+    --accent:#d62828; /* Яркий красный (расход) */
+    --accent-2:#8338ec; /* Яркий фиолетовый (доход/главный акцент) */
+    --glass: rgba(255,255,255,0.04); /* Эффект "стекла" */
+    --radius:18px;
+    --goal-color: #00b4d8; /* Цвет для целей (новый акцент) */
+  }
+  *{box-sizing:border-box; transition: all 0.2s ease-out; }
+  /* Динамичный и приятный фон */
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#040306 0%, #0c0910 100%);color:var(--text);font-family:'JetBrains Mono', 'Fira Code', monospace; font-size:14px; }
+  h1{font-family:Georgia, serif;margin:0}
+  
+  /*
+  ==============================================
+  ОБЩИЕ ЭЛЕМЕНТЫ
+  ==============================================
+  */
+  .app{padding:12px;max-width:1200px;margin:0 auto} /* Увеличил max-width для 3-х колонок */
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .logo{display:flex;flex-direction:column}
+  
+  /* Навигация (ШАПКА) */
+  .tablist{display:flex; justify-content:space-around; background:var(--card); border-radius:12px; padding:6px; margin-bottom:16px; box-shadow:0 4px 15px rgba(0,0,0,0.4);}
+  .tab{flex:1;text-align:center;padding:12px 0;font-weight:bold;color:var(--muted);cursor:pointer;border-radius:8px;}
+  .tab.active{background:var(--accent-2);color:white;box-shadow:0 2px 10px rgba(131,56,236,0.6);}
+  
+  /* Скрываем старые вкладки */
+  .tabs{display:none;}
+  
+  .balance-card{background:linear-gradient(145deg, var(--card), #100f12);border-radius:24px;padding:16px;margin-bottom:12px;box-shadow:0 12px 30px rgba(0,0,0,0.6); border:1px solid var(--glass)}
+  .balance-line{display:flex;justify-content:space-between;align-items:center}
+  .balance-title{font-size:16px;color:var(--muted)} .balance-value{font-size:32px;font-weight:800; color:#fff}
+  
+  /*
+  ==============================================
+  ФОРМЫ И КНОПКИ
+  ==============================================
+  */
+  .quick-input{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input.amount{flex:1;border-radius:12px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);font-size:20px;background:var(--card);color:inherit;min-width:100px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.4)}
+  /* Увеличены размеры для удобства на телефоне */
+  select, input[type=text], input[type=number], input[type=date], .input-like{flex:1;min-width:100px;border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.08);background:var(--card);color:inherit;appearance:none; font-size:16px; }
+  select:focus, input:focus, button:focus, .big-btn:focus { outline:1px solid var(--accent-2); box-shadow:0 0 5px rgba(131,56,236,0.6); }
+
+  .list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .card{background:var(--card);border-radius:16px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap; border:1px solid var(--glass); cursor:default;}
+  .card.clickable:hover{box-shadow:0 4px 15px rgba(0,0,0,0.4); transform: translateY(-2px);}
+
+  /* Увеличены кнопки + / - */
+  .big-btn{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold; background:var(--card); color:var(--text); padding:0; font-size:18px; }
+  .big-btn:hover{background:rgba(255,255,255,0.1); border-color:var(--accent-2); }
+  
+  .fab{position:fixed;right:18px;bottom:24px;background:linear-gradient(90deg,var(--accent-2),var(--accent));color:white;width:55px;height:55px;border-radius:50%;border:0;cursor:pointer;font-size:30px;font-weight:bold;z-index:100; box-shadow:0 4px 15px rgba(0,0,0,0.8);}
+  .fab:hover{transform:scale(1.05);}
+  
+  .hidden{display:none}
+  button{cursor:pointer;font-weight:600;color:inherit; background:none; border:none; padding:10px 14px; border-radius:10px; font-size:16px;}
+  button:hover{background:rgba(255,255,255,0.1);}
+  
+  .top-actions button{ width:40px; height:40px; border-radius:10px; padding:0; margin-left:8px; font-size:18px; border:1px solid var(--glass); }
+  .top-actions button:hover{ background:rgba(255,255,255,0.1); }
+  
+  /*
+  ==============================================
+  МОДАЛЬНЫЕ ОКНА
+  ==============================================
+  */
+  .modal-overlay{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:998; }
+  .modal{ position:fixed; left:50%; transform:translateX(-50%); top:12%; background:var(--bg); padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,0.08); box-shadow:0 12px 30px rgba(0,0,0,0.8); z-index:999; max-height:80vh; overflow-y:auto; max-width:550px; width:95%;}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--glass);}
+
+  /*
+  ==============================================
+  АДАПТИВНАЯ СЕТКА (при активной вкладке "Счета" или "Расходы")
+  ==============================================
+  */
+  @media(min-width:1024px){ /* Десктоп: 3 колонки */
+    .grid{display:grid;grid-template-columns:300px 1fr 300px;gap:16px} 
+    #rightCol { display: flex; flex-direction: column; } /* Правая колонка - вертикальный стек */
+  }
+  @media(min-width:768px) and (max-width:1023px) { /* Планшеты: 2 колонки */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    /* Перемещаем правую колонку вниз */
+    #rightCol { grid-column: span 2; order: 3; } 
+    #leftCol { order: 1; }
+    #centerCol { order: 2; }
+  }
+  @media(max-width:767px){ /* Телефоны: 1 колонка - максимальная поддержка */
+    .grid{display:flex;flex-direction:column}
+    /* Порядок на телефоне: Центр (Ввод) -> Лево (Баланс) -> Право (Обзор) */
+    #leftCol { order: 2; }
+    #centerCol { order: 1; }
+    #rightCol { order: 3; }
+    
+    .quick-input > * { min-width: 100%; } /* Поля ввода на всю ширину */
+    .top-actions { display:flex; gap:0; }
+  }
+  
+  /*
+  ==============================================
+  СТИЛИ ДОЛГОВ
+  ==============================================
+  */
+  .debt-section{ margin-top:20px; }
+  .debt-title{ font-size:18px; font-weight:bold; color:var(--text); padding:10px 0; border-bottom:1px solid var(--glass); margin-bottom:10px; }
+  .debt-card{ background:var(--card); border-radius:12px; padding:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border:1px solid var(--glass); cursor:pointer;}
+  .debt-card:hover { box-shadow:0 4px 15px rgba(0,0,0,0.4); transform: translateY(-2px); }
+  .debt-info{flex-grow:1;}
+  .debt-name{font-size:16px; font-weight:bold;}
+  .debt-meta{font-size:12px; color:var(--muted);}
+  .debt-amount{font-size:22px; font-weight:800;}
+  .debt-amount.owed{color:var(--accent-2);} /* Мне должны */
+  .debt-amount.mine{color:var(--accent);} /* Я должен */
+  
+  .debt-actions{ background:var(--card); border:none; padding:10px; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; margin-left:10px; font-weight:900; }
+  .debt-actions:hover{ background:rgba(255,255,255,0.1); }
+
+  #debtModal .modal-content { display:flex; flex-direction:column; gap:10px; }
+  #debtModal button { width:100%; }
+  
+  /*
+  ==============================================
+  СТИЛИ ИСТОРИИ ДОЛГОВ
+  ==============================================
+  */
+  .history-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--glass); font-size:12px; }
+  .history-item:last-child { border-bottom:none; padding-bottom:0; }
+  .history-item .h-date { color:var(--muted); }
+  .history-item .h-name { font-weight:bold; }
+  .history-item .h-amount.received { color:var(--accent-2); } /* Заменено repaid на received для ясности */
+  .history-item .h-amount.repaid { color:var(--accent); } /* Заменено paid на repaid для ясности */
+
+
+  /*
+  ==============================================
+  СТИЛИ ОБЗОРА
+  ==============================================
+  */
+  .summary-block{ padding:16px; border-radius:18px; background:var(--card); border:1px solid var(--glass); margin-bottom:16px; }
+  .summary-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed var(--glass); }
+  .summary-item:last-child{ border-bottom:none; padding-bottom:0; }
+  .summary-item .label{ color:var(--muted); font-size:14px; }
+  .summary-item .value{ font-weight:bold; font-size:18px; }
+  .summary-item.total .value{ font-size:26px; color:var(--accent-2); }
+  .summary-item.expense .value{ color:var(--accent); }
+  .summary-item.income .value{ color:var(--accent-2); }
+  
+  .period-toggle{ display:flex; gap:0; background:rgba(255,255,255,0.05); border-radius:10px; padding:4px; }
+  .period-toggle button{ padding:8px 12px; border-radius:8px; font-size:14px; border:none; background:transparent; }
+  .period-toggle button.active{ background:var(--accent-2); color:#fff; font-weight:bold; box-shadow:0 1px 5px rgba(0,0,0,0.5); }
+
+  /*
+  ==============================================
+  СТИЛИ ФИНАНСОВЫХ ЦЕЛЕЙ (НОВАЯ ОПЦИЯ)
+  ==============================================
+  */
+  .goal-card { background:linear-gradient(145deg, var(--card), #18151c); border-radius:12px; padding:12px; margin-bottom:10px; border:1px solid var(--glass); cursor:pointer;}
+  .goal-card:hover { border-color:var(--goal-color); transform: translateY(-2px); }
+  .goal-title { font-weight:bold; font-size:16px; color:var(--goal-color); }
+  .goal-progress { height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin:8px 0; }
+  .goal-progress-bar { height:100%; background:var(--goal-color); width:0%; transition:width 0.5s ease-out; }
+  .goal-meta { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+  
+  /*
+  ==============================================
+  СТИЛИ Вкладки "Расходы" (НОВЫЙ АНАЛИЗ)
+  ==============================================
+  */
+  .expense-summary-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:20px; }
+  .expense-table-container { grid-column: 1 / span 2; max-height: 400px; overflow-y: auto; }
+  .category-table { width:100%; border-collapse: collapse; margin-top:10px; }
+  .category-table th, .category-table td { padding:10px; text-align:left; border-bottom:1px solid var(--glass); }
+  .category-table th { color:var(--muted); font-weight:normal; font-size:12px; }
+  .category-table td .category-name { font-weight:bold; }
+  .category-table td .category-amount { color:var(--accent); font-weight:bold; }
+  .category-table tr:hover { background:rgba(255,255,255,0.05); }
+  .chart-container { max-width: 100%; height: 250px; position:relative; } /* Для холста Chart.js */
+
+</style>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  
+    <div id="rulesModal" class="hidden modal">
+    <div class="modal-header">
+      <div class="small" style="color:var(--text); font-weight:bold; font-size:18px;">Автопополнения / Автосписания</div>
+      <button id="closeRules">✕</button>
+    </div>
+    
+    <div id="newRuleForm" style="border:1px solid var(--accent-2); border-radius:12px; padding:12px; margin-bottom:16px; display:none;">
+      <h4 style="margin:0 0 10px 0; color:var(--accent-2)">Новое Правило</h4>
+      <input id="ruleName" type="text" placeholder="Название (например, Netflix)" style="width:100%; margin-bottom:8px;" />
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="ruleAmount" type="number" placeholder="Сумма" style="flex:1" />
+        <select id="ruleType" style="flex:1"><option value="expense">Списание</option><option value="income">Пополнение</option></select>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="ruleNextDate" type="date" style="flex:1" />
+        <select id="ruleFrequency" style="flex:1">
+          <option value="monthly">Ежемесячно</option>
+          <option value="weekly">Еженедельно</option>
+          <option value="yearly">Ежегодно</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button id="saveRuleBtn" style="flex:1; background:var(--accent-2); color:#fff; padding:10px;">Сохранить Правило</button>
+        <button id="cancelRuleBtn" style="background:var(--card);">Отмена</button>
+      </div>
+    </div>
+    
+    <div id="rulesList" style="margin-top:10px"></div>
+    <div style="margin-top:16px"><button id="newRuleBtn" style="width:100%; border:1px solid var(--accent-2); background:rgba(131,56,236,0.2)">+ Новое Правило (Подписка/Автоплатеж)</button></div>
+  </div>
+  
+  <div id="settingsModal" class="hidden modal">
+    <div class="modal-header">
+      <div class="small" style="color:var(--text); font-weight:bold; font-size:18px;">Настройки / Редактор</div>
+      <button id="closeSettings">✕</button>
+    </div>
+    
+    <h3 style="margin:16px 0 8px 0; color:var(--accent-2)">Категории</h3>
+    <div id="categoryList" class="list"></div>
+    <div style="margin-top:12px"><button id="newCatBtn" style="width:100%; border:1px solid var(--glass)">+ Новая категория</button></div>
+
+    <h3 style="margin:16px 0 8px 0; color:var(--accent-2)">Счета</h3>
+    <div id="accountSettingsList" class="list"></div>
+    <div style="margin-top:12px"><button id="newAccBtn" style="width:100%; border:1px solid var(--glass)">+ Новый счет</button></div>
+
+    <h3 style="margin:16px 0 8px 0; color:var(--accent-2)">Бюджеты</h3>
+    <div id="budgetSettingsList" class="list"></div>
+    <div style="margin-top:12px"><button id="newBudgetBtn" style="width:100%; border:1px solid var(--glass)">+ Новый бюджет</button></div>
+  </div>
+  
+  <div id="debtModal" class="hidden modal">
+    <div class="modal-header">
+      <div class="small" style="color:var(--text); font-weight:bold; font-size:18px;">Действие с долгом</div>
+      <button id="closeDebtModal">✕</button>
+    </div>
+    <div id="debtModalContent" class="modal-content">
+      <input id="debtActionAmount" type="number" placeholder="Сумма" />
+      <input id="debtActionName" type="text" placeholder="Комментарий (необязательно)" />
+      <select id="debtActionAccount" title="Счет для операции"></select>
+      <div id="owedActions" style="display:none; flex-direction:column; gap:10px;">
+        <button id="debtReceiveBtn" style="background:var(--accent-2); color:#fff">Получить (Погасить) Долг</button>
+        <button id="debtForgiveBtn" style="background:var(--accent); color:#fff">Простить Долг</button>
+      </div>
+      <div id="mineActions" style="display:none; flex-direction:column; gap:10px;">
+        <button id="debtRepayBtn" style="background:var(--accent-2); color:#fff">Погасить (Свой) Долг</button>
+        <button id="debtAskForgiveBtn" style="background:var(--accent); color:#fff">Удалить свой долг (Прощение)</button>
+      </div>
+    </div>
+  </div>
+
+    <div id="newDebtModal" class="hidden modal">
+    <div class="modal-header">
+      <div class="small" style="color:var(--text); font-weight:bold; font-size:18px;" id="newDebtTitle">Новый Долг</div>
+      <button id="closeNewDebtModal">✕</button>
+    </div>
+    <div id="newDebtModalContent" class="modal-content">
+      <input id="newDebtAmount" type="number" placeholder="Сумма долга" />
+      <input id="newDebtName" type="text" placeholder="Имя/Описание долга" />
+      <button id="saveNewDebtBtn" style="background:var(--accent-2); color:#fff">Сохранить</button>
+    </div>
+  </div>
+
+  <div id="goalsModal" class="hidden modal">
+    <div class="modal-header">
+      <div class="small" style="color:var(--text); font-weight:bold; font-size:18px;" id="goalsModalTitle">Финансовые Цели</div>
+      <button id="closeGoalsModal">✕</button>
+    </div>
+    
+    <div id="newGoalForm" style="border:1px solid var(--goal-color); border-radius:12px; padding:12px; margin-bottom:16px; display:none;">
+      <h4 style="margin:0 0 10px 0; color:var(--goal-color)">Новая Цель</h4>
+      <input id="goalName" type="text" placeholder="Название цели (например, Макбук)" style="width:100%; margin-bottom:8px;" />
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="goalTarget" type="number" placeholder="Целевая сумма" style="flex:1" />
+        <input id="goalCurrent" type="number" placeholder="Текущая сумма (0)" style="flex:1" value="0" />
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button id="saveGoalBtn" style="flex:1; background:var(--goal-color); color:#fff; padding:10px;">Сохранить Цель</button>
+        <button id="cancelGoalBtn" style="background:var(--card);">Отмена</button>
+      </div>
+    </div>
+    
+    <div id="goalsSettingsList" style="margin-top:10px"></div>
+    <div style="margin-top:16px"><button id="newGoalBtn" style="width:100%; border:1px solid var(--goal-color); color:var(--goal-color);">+ Новая Финансовая Цель</button></div>
+  </div>
+
+  <div id="modalOverlay" class="hidden modal-overlay"></div>
+
+    <div class="app">
+    <div class="header">
+      <div class="logo"><h1>Tenebris</h1><div class="small">ledger</div></div>
+      <div class="top-actions">
+        <button id="rulesBtn" title="Подписки/Автоплатежи">⟳</button>
+        <button id="settingsBtn" title="Настройки">⚙</button>
+      </div>
+    </div>
+
+        <div class="tablist">
+      <div class="tab" data-tab="debts" id="tabDebts">Долги</div>
+      <div class="tab active" data-tab="accounts" id="tabAccounts">Счета</div>
+      <div class="tab" data-tab="expenses" id="tabExpenses">Расходы</div>
+    </div>
+            <div id="debtsView" class="hidden">
+      <div class="balance-card">
+        <div class="balance-line">
+          <div>
+            <div class="balance-title">Общая сумма долгов</div>
+            <div class="balance-value" style="font-size:30px;"><span id="totalOwed">0,00₽</span> / <span id="totalMine">0,00₽</span></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="debt-section">
+        <div class="debt-title" style="border-bottom-color:var(--accent-2)">Мне должны</div>
+        <div id="owedDebtsList">
+          <div class="small" style="color:var(--muted)">Нет активных долгов, которые вам должны.</div>
+        </div>
+        <div style="margin-top:12px;"><button id="newOwedDebtBtn" data-type="owed" style="width:100%; border:1px solid var(--accent-2); color:var(--accent-2);">+ Новый долг (Мне должны)</button></div>
+      </div>
+      
+      <div class="debt-section">
+        <div class="debt-title" style="border-bottom-color:var(--accent)">Я должен</div>
+        <div id="mineDebtsList">
+          <div class="small" style="color:var(--muted)">Нет активных долгов, которые вы должны.</div>
+        </div>
+        <div style="margin-top:12px;"><button id="newMineDebtBtn" data-type="mine" style="width:100%; border:1px solid var(--accent); color:var(--accent);">+ Новый долг (Я должен)</button></div>
+      </div>
+      
+      <div class="debt-section">
+        <div class="debt-title" style="border-bottom-color:var(--glass)">История Погашений</div>
+        <div id="debtHistoryList">
+          <div class="small" style="color:var(--muted)">История транзакций, связанных с долгами, будет отображаться здесь.</div>
+        </div>
+      </div>
+    </div>
+            <div id="accountsView">
+      <div class="grid">
+      
+        <div id="centerCol">
+          <div class="balance-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+              <div><div class="small" id="monthLabel">Январь</div><div style="font-size:20px; font-weight:bold; color:var(--accent-2)">+ <span id="topIncome">0,00₽</span></div></div>
+              <div style="font-size:20px; font-weight:bold; color:var(--accent)">− <span id="topExpense">0,00₽</span></div>
+            </div>
+
+            <div class="quick-input">
+              <input id="qAmount" class="amount" type="number" placeholder="Сумма" />
+              <input id="qNote" type="text" placeholder="Комментарий" />
+              <select id="qCat"></select>
+              <select id="qAccount"></select>
+            </div>
+            
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;justify-content:space-between;width:100%">
+              <div class="small" id="quickStats">Транзакций: <span id="txnCount">0</span></div>
+              <div style="display:flex;gap:8px">
+                <button id="qAdd" style="background:var(--accent-2); color:#fff;">Добавить</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div style="width:100%;display:flex;justify-content:space-between;align-items:center">
+              <div><div class="small">Бюджеты (месяц)</div></div>
+            </div>
+            <div class="list" id="budgetList" style="margin-top:10px">
+              <div class="small" style="color:var(--muted)">Нет активных бюджетов.</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="left-col" id="leftCol">
+          <div class="balance-card">
+            <div class="balance-line" style="margin-bottom:10px">
+              <div>
+                <div class="balance-title">Текущий Баланс</div>
+                <div class="balance-value" id="currentBalance">0,00₽</div>
+              </div>
+              <div style="text-align:right">
+                <div class="small">Прогноз до <span id="forecastDate">0000-00-00</span></div>
+                <div class="balance-value" style="font-size:22px; color:var(--muted)" id="forecastBig">0,00₽</div>
+              </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; gap:4px; margin-bottom:4px;">
+              <div class="month-bar" style="flex:1; height:4px; background:var(--bg); border-radius:2px; overflow:hidden;">
+                <div id="monthBarExpense" class="month-left" style="background:var(--accent); height:100%; width:50%; float:left;"></div>
+              </div>
+              <div class="month-bar" style="flex:1; height:4px; background:var(--bg); border-radius:2px; overflow:hidden;">
+                <div id="monthBarIncome" class="month-right" style="background:var(--accent-2); height:100%; width:50%; float:right;"></div>
+              </div>
+            </div>
+            <div class="month-bar-info" style="display:flex; justify-content:space-between;">
+              <div class="small" style="color:var(--accent)">− <span id="monthExpense">0,00₽</span></div>
+              <div class="small" style="color:var(--accent-2)">+ <span id="monthIncome">0,00₽</span></div>
+            </div>
+
+            <h3 style="margin:16px 0 8px 0; font-size:18px; color:var(--muted)">Счета</h3>
+            <div class="list" id="accountsList">
+              <div class="small" style="color:var(--muted)">Нет активных счетов.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="width:100%"><div class="small">Баланс за 30 дней</div>
+              <div class="chart-container" style="height:120px;"><canvas id="miniCanvas"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="rightCol">
+          <div class="summary-block">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:18px; font-weight:bold; color:var(--text)">Финансовый Обзор</div>
+              <div class="period-toggle" id="summaryPeriodToggle">
+                <button data-period="month" class="active">Месяц</button>
+                <button data-period="week">Неделя</button>
+              </div>
+            </div>
+            <div class="summary-item total">
+              <div class="label">Остаток на начало <span id="summaryPeriodName">месяца</span></div>
+              <div class="value" id="startBalance">0,00₽</div>
+            </div>
+            <div class="summary-item income">
+              <div class="label">Поступления (<span id="summaryIncomeLabel">за месяц</span>)</div>
+              <div class="value" id="summaryIncome">+0,00₽</div>
+            </div>
+            <div class="summary-item expense">
+              <div class="label">Расходы (<span id="summaryExpenseLabel">за месяц</span>)</div>
+              <div class="value" id="summaryExpense">−0,00₽</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">Обязательные (Авто-) траты</div>
+              <div class="value" id="summaryRulesExpense" style="color:var(--accent)">−0,00₽</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">Ожидаемый чистый остаток</div>
+              <div class="value" id="summaryNetBalance" style="font-size:22px;">0,00₽</div>
+            </div>
+          </div>
+
+          <div class="summary-block" style="border-color:var(--goal-color)">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:18px; font-weight:bold; color:var(--goal-color)">Финансовые Цели</div>
+              <button id="openGoalsBtn" title="Редактировать цели" style="border:1px solid var(--goal-color); color:var(--goal-color); padding:5px 10px; font-size:12px;">Управление</button>
+            </div>
+            <div id="goalsList">
+              <div class="small" style="color:var(--muted)">Нет активных целей.</div>
+            </div>
+          </div>
+          
+          <div class="card" style="margin-top:0">
+            <div style="width:100%;display:flex;justify-content:space-between;align-items:center; margin-bottom:12px;">
+              <div><div class="small">Последние Транзакции</div></div>
+              <div><input id="filter" placeholder="Поиск (Ctrl+K)" class="input-like" style="width:140px; padding:8px 10px;" /></div>
+            </div>
+            <div class="txn-list" id="txnList">
+              <div class="small" style="color:var(--muted)">Нет транзакций за выбранный период.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+        
+        <div id="expensesView" class="hidden">
+            <div class="balance-card">
+                <div class="balance-title" style="margin-bottom:10px;">Анализ Расходов (Текущий Месяц)</div>
+                <div class="expense-summary-grid">
+                    <div class="summary-block" style="margin-bottom:0;">
+                        <div class="small" style="margin-bottom:8px; color:var(--muted);">Расходы по категориям (Диаграмма)</div>
+                        <div class="chart-container"><canvas id="expenseDoughnutChart"></canvas></div>
+                    </div>
+                    <div class="summary-block" style="margin-bottom:0;">
+                        <div class="small" style="margin-bottom:8px; color:var(--muted);">Динамика расходов за 6 месяцев</div>
+                        <div class="chart-container"><canvas id="expenseLineChart"></canvas></div>
+                    </div>
+                    <div class="expense-table-container">
+                        <div class="debt-title" style="border-bottom-color:var(--accent); font-size:16px;">Детальный Анализ (Текущий Месяц)</div>
+                        <table class="category-table">
+                            <thead>
+                                <tr><th>Категория</th><th>Транзакций</th><th>Сумма</th><th>%</th></tr>
+                            </thead>
+                            <tbody id="categoryTableBody">
+                                <tr><td colspan="4" class="small" style="color:var(--muted); text-align:center;">Нет данных о расходах за текущий месяц.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    </div>
+        <button class="fab" id="openAdd" title="Добавить транзакцию">+</button>
+  </div>
+
+<script>
+(() => {
+  /* ==============================================
+    ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+    ============================================== */
+  const uid = () => Math.random().toString(36).slice(2,9);
+  const today = () => new Date().toISOString().slice(0,10);
+  const formatCurrency = (amount) => (Number(amount) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + '₽';
+  const isToday = (dateStr) => dateStr === today();
+  
+  function getEndOfMonth(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0,10);
+  }
+  
+  function getStartOfMonth(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0,10);
+  }
+  
+  function getMonthName(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleString('ru-RU', { month: 'long' });
+  }
+  
+  function getStartOfWeek(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayOfWeek = d.getDay();
+    // Устанавливаем понедельник как начало недели (1, а не 0)
+    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const startOfWeek = new Date(d.setDate(diff));
+    return startOfWeek.toISOString().slice(0,10);
+  }
+  
+  function getEndOfWeek(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayOfWeek = d.getDay();
+    // Устанавливаем воскресенье как конец недели (7-dayOfWeek)
+    const diff = d.getDate() + (dayOfWeek === 0 ? 0 : 7 - dayOfWeek);
+    const endOfWeek = new Date(d.setDate(diff));
+    return endOfWeek.toISOString().slice(0,10);
+  }
+  
+  function getMonthKey(dateStr) {
+    const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+    return d.toISOString().slice(0, 7);
+  }
+  
+  const getColor = (() => {
+    const colors = {};
+    // Расширенная и улучшенная палитра
+    const palette = ['#8338ec', '#d62828', '#00b4d8', '#ffbe0b', '#fb5607', '#ff006e', '#3a86ff', '#8ac926', '#1a759f', '#ffc300', '#f94144', '#f8961e', '#43aa8b', '#277da1'];
+    let index = 0;
+    return (name) => {
+      if (!colors[name]) {
+        colors[name] = palette[index % palette.length];
+        index++;
+      }
+      return colors[name];
+    };
+  })();
+  
+  /* ==============================================
+    ХРАНИЛИЩЕ ДАННЫХ (DB Class)
+    ============================================== */
+  class DB {
+    async open(){ 
+      if(!('indexedDB' in window)) return null;
+      return new Promise((res)=>{ 
+        const r=indexedDB.open('tenebris-db',1); 
+        r.onupgradeneeded=e=>{const db=e.target.result; if(!db.objectStoreNames.contains('single')) db.createObjectStore('single',{keyPath:'id'})}; 
+        r.onsuccess=e=>res(e.target.result); 
+        r.onerror=()=>res(null); 
+      });
+    }
+    async load(){ 
+      try{ 
+        const db=await this.open(); 
+        if(!db){ const raw=localStorage.getItem('tenebris'); return raw?JSON.parse(raw):null; } 
+        return new Promise(res=>{ 
+          const tx=db.transaction('single','readonly'); const s=tx.objectStore('single'); const r=s.get('single'); 
+          r.onsuccess=()=>res(r.result? r.result.payload:null); 
+          r.onerror=()=>res(null); 
+        }); 
+      }catch(e){ const raw=localStorage.getItem('tenebris'); return raw?JSON.parse(raw):null; } 
+    }
+    async save(payload){ 
+      try{ 
+        const db=await this.open(); 
+        if(!db){ localStorage.setItem('tenebris', JSON.stringify(payload)); return true; } 
+        return new Promise(res=>{ 
+          const tx=db.transaction('single','readwrite'); const s=tx.objectStore('single'); const r=s.put({id:'single',payload}); 
+          r.onsuccess=()=>res(true); 
+          r.onerror=()=>res(false); 
+        }); 
+      }catch(e){ localStorage.setItem('tenebris', JSON.stringify(payload)); return true; } 
+    }
+  }
+  const db = new DB();
+  
+  /* ==============================================
+    ГЛОБАЛЬНОЕ СОСТОЯНИЕ (STATE)
+    ============================================== */
+  let state = {
+    activeTab: 'accounts',
+    accounts: [],
+    transactions: [],
+    categories: [],
+    debts: [],
+    budgets: [],
+    rules: [],
+    goals: [],
+    currentPeriod: 'month',
+    currentDate: today(),
+    activeDebt: null, // Для модального окна действий с долгом
+  };
+  
+  // Инициализация данных по умолчанию
+  const defaultState = {
+    accounts: [{id: uid(), name: 'Наличные', balance: 0, initial: 0}],
+    categories: [
+      { id: uid(), name: 'Еда', type: 'expense', icon: '🍔' },
+      { id: uid(), name: 'Зарплата', type: 'income', icon: '💰' },
+      { id: uid(), name: 'Транспорт', type: 'expense', icon: '🚗' },
+      { id: uid(), name: 'Подарки', type: 'income', icon: '🎁' }
+    ],
+    transactions: [],
+    debts: [], budgets: [], rules: [], goals: [],
+    activeTab: 'accounts', currentPeriod: 'month', currentDate: today(), activeDebt: null,
+  };
+  
+  /* ==============================================
+    ФУНКЦИИ УПРАВЛЕНИЯ UI/VIEW
+    ============================================== */
+  
+  // Показать/скрыть модальное окно
+  function toggleModal(modalId, show) {
+    const modal = document.getElementById(modalId);
+    const overlay = document.getElementById('modalOverlay');
+    if (modal && overlay) {
+      if (show) {
+        modal.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+        overlay.classList.add('hidden');
+      }
+    }
+  }
+  
+  // Переключение вкладок
+  function changeTab(tabName) {
+    state.activeTab = tabName;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+  
+    document.getElementById('debtsView').classList.add('hidden');
+    document.getElementById('accountsView').classList.add('hidden');
+    document.getElementById('expensesView').classList.add('hidden');
+  
+    document.getElementById(tabName + 'View').classList.remove('hidden');
+  
+    if (tabName === 'accounts') updateAccountsView();
+    if (tabName === 'debts') updateDebtsView();
+    if (tabName === 'expenses') updateExpensesView();
+    saveState();
+  }
+  
+  // Обновление вью "Счета"
+  function updateAccountsView() {
+    // 1. Общий баланс
+    const totalBalance = state.accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    document.getElementById('currentBalance').textContent = formatCurrency(totalBalance);
+  
+    // 2. Обновление списка счетов
+    const accountsList = document.getElementById('accountsList');
+    accountsList.innerHTML = state.accounts.length === 0 ? '<div class="small" style="color:var(--muted)">Нет активных счетов.</div>' : '';
+    state.accounts.forEach(acc => {
+      const div = document.createElement('div');
+      div.className = 'card clickable';
+      div.setAttribute('data-id', acc.id);
+      div.innerHTML = `
+        <div style="font-weight:bold">${acc.name}</div>
+        <div style="font-size:18px; font-weight:bold; color:${acc.balance >= 0 ? 'var(--accent-2)' : 'var(--accent)'}">${formatCurrency(acc.balance)}</div>
+      `;
+      accountsList.appendChild(div);
+    });
+  
+    // 3. Обновление формы быстрого ввода
+    updateQuickInput();
+  
+    // 4. Обновление обзора и графиков
+    updateSummary();
+    updateBudgetList();
+    updateGoalsList();
+    updateTxnList();
+    updateMiniChart();
+  }
+  
+  // Обновление формы быстрого ввода
+  function updateQuickInput() {
+    const qCat = document.getElementById('qCat');
+    const qAccount = document.getElementById('qAccount');
+    qCat.innerHTML = '';
+    qAccount.innerHTML = '';
+  
+    state.categories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = `${cat.icon || ''} ${cat.name} (${cat.type === 'expense' ? '−' : '+'})`;
+      qCat.appendChild(option);
+    });
+  
+    state.accounts.forEach(acc => {
+      const option = document.createElement('option');
+      option.value = acc.id;
+      option.textContent = acc.name;
+      qAccount.appendChild(option);
+    });
+  }
+  
+  // Обновление обзора (правая колонка)
+  function updateSummary() {
+    const now = new Date(state.currentDate);
+    let startDate, endDate, periodName;
+  
+    if (state.currentPeriod === 'month') {
+      startDate = getStartOfMonth(state.currentDate);
+      endDate = getEndOfMonth(state.currentDate);
+      periodName = 'месяца';
+    } else {
+      startDate = getStartOfWeek(state.currentDate);
+      endDate = getEndOfWeek(state.currentDate);
+      periodName = 'недели';
+    }
+  
+    const prevDate = new Date(startDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const startBalance = calculateBalance(prevDate.toISOString().slice(0, 10));
+  
+    const periodTxns = state.transactions.filter(txn => txn.date >= startDate && txn.date <= endDate);
+    const periodIncome = periodTxns.filter(txn => txn.amount > 0).reduce((sum, txn) => sum + txn.amount, 0);
+    const periodExpense = periodTxns.filter(txn => txn.amount < 0).reduce((sum, txn) => sum + txn.amount, 0);
+  
+    // Автоматические/обязательные траты
+    const periodRulesExpense = state.rules.filter(rule => rule.type === 'expense').reduce((sum, rule) => {
+      // Простая логика: если правило активно и соответствует периоду
+      return sum + (rule.nextDate && rule.nextDate <= endDate ? Number(rule.amount) : 0);
+    }, 0) * -1; // Расход, поэтому отрицательный
+  
+    const netBalance = startBalance + periodIncome + periodExpense + periodRulesExpense;
+  
+    document.getElementById('summaryPeriodName').textContent = periodName;
+    document.getElementById('summaryIncomeLabel').textContent = `за ${periodName.replace(/а$/, '')}`;
+    document.getElementById('summaryExpenseLabel').textContent = `за ${periodName.replace(/а$/, '')}`;
+  
+    document.getElementById('startBalance').textContent = formatCurrency(startBalance);
+    document.getElementById('summaryIncome').textContent = formatCurrency(periodIncome);
+    document.getElementById('summaryExpense').textContent = formatCurrency(periodExpense);
+    document.getElementById('summaryRulesExpense').textContent = formatCurrency(periodRulesExpense);
+    document.getElementById('summaryNetBalance').textContent = formatCurrency(netBalance);
+  
+    // Верхний блок в centerCol
+    document.getElementById('monthLabel').textContent = getMonthName(state.currentDate);
+    document.getElementById('topIncome').textContent = formatCurrency(periodIncome);
+    document.getElementById('topExpense').textContent = formatCurrency(periodExpense);
+    document.getElementById('txnCount').textContent = periodTxns.length;
+  
+    // Обновление шкалы расходов/доходов
+    const absIncome = Math.abs(periodIncome);
+    const absExpense = Math.abs(periodExpense);
+    const totalFlow = absIncome + absExpense;
+    const incomePercent = totalFlow > 0 ? (absIncome / totalFlow) * 100 : 50;
+    const expensePercent = totalFlow > 0 ? (absExpense / totalFlow) * 100 : 50;
+  
+    document.getElementById('monthBarExpense').style.width = `${expensePercent}%`;
+    document.getElementById('monthBarIncome').style.width = `${incomePercent}%`;
+    document.getElementById('monthIncome').textContent = formatCurrency(absIncome);
+    document.getElementById('monthExpense').textContent = formatCurrency(absExpense);
+  
+    // Прогноз
+    const avgDailyExpense = absExpense / new Date(endDate).getDate(); // Простая аппроксимация
+    const daysRemaining = (new Date(endDate).getTime() - now.getTime()) / (1000 * 3600 * 24);
+    const forecastBalance = totalBalance - (avgDailyExpense * daysRemaining);
+    document.getElementById('forecastDate').textContent = endDate;
+    document.getElementById('forecastBig').textContent = formatCurrency(forecastBalance);
+    document.getElementById('forecastBig').style.color = forecastBalance >= 0 ? 'var(--accent-2)' : 'var(--accent)';
+  }
+  
+  // Обновление списка транзакций
+  function updateTxnList() {
+    const txnList = document.getElementById('txnList');
+    txnList.innerHTML = '';
+    
+    const filterText = document.getElementById('filter').value.toLowerCase();
+    const endDate = state.currentPeriod === 'month' ? getEndOfMonth(state.currentDate) : getEndOfWeek(state.currentDate);
+    const startDate = state.currentPeriod === 'month' ? getStartOfMonth(state.currentDate) : getStartOfWeek(state.currentDate);
+  
+    const filteredTxns = state.transactions
+      .filter(txn => txn.date >= startDate && txn.date <= endDate)
+      .filter(txn => !filterText || txn.note.toLowerCase().includes(filterText) || state.categories.find(c => c.id === txn.catId)?.name.toLowerCase().includes(filterText))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+    if (filteredTxns.length === 0) {
+      txnList.innerHTML = '<div class="small" style="color:var(--muted)">Нет транзакций за выбранный период.</div>';
+      return;
+    }
+  
+    filteredTxns.forEach(txn => {
+      const cat = state.categories.find(c => c.id === txn.catId) || { name: 'Без категории', icon: '❓' };
+      const account = state.accounts.find(a => a.id === txn.accountId)?.name || 'Счет удален';
+      const amountStr = formatCurrency(Math.abs(txn.amount));
+      const color = txn.amount >= 0 ? 'var(--accent-2)' : 'var(--accent)';
+      
+      const div = document.createElement('div');
+      div.className = 'card clickable';
+      div.style.padding = '8px 12px';
+      div.innerHTML = `
+        <div style="display:flex; flex-direction:column; flex:1">
+          <div style="font-weight:bold; font-size:14px;">${cat.icon} ${txn.note || cat.name}</div>
+          <div class="small" style="color:var(--muted);">${account} - ${new Date(txn.date).toLocaleDateString('ru-RU')}</div>
+        </div>
+        <div style="font-size:16px; font-weight:bold; color:${color}">${txn.amount >= 0 ? '+' : '−'}${amountStr}</div>
+      `;
+      txnList.appendChild(div);
+    });
+  }
+  
+  // Обновление списка бюджетов
+  function updateBudgetList() {
+    const budgetList = document.getElementById('budgetList');
+    budgetList.innerHTML = '';
+  
+    if (state.budgets.length === 0) {
+      budgetList.innerHTML = '<div class="small" style="color:var(--muted)">Нет активных бюджетов.</div>';
+      return;
+    }
+  
+    const monthKey = getMonthKey(state.currentDate);
+  
+    state.budgets.forEach(budget => {
+      // Расчет потраченной суммы для бюджета
+      const spent = state.transactions
+        .filter(t => t.catId === budget.catId && getMonthKey(t.date) === monthKey && t.amount < 0)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+      const remaining = budget.amount - spent;
+      const percent = Math.min(100, (spent / budget.amount) * 100);
+      const color = percent > 90 ? 'var(--accent)' : 'var(--accent-2)';
+  
+      const cat = state.categories.find(c => c.id === budget.catId) || { name: 'Удаленная категория', icon: '❌' };
+  
+      const div = document.createElement('div');
+      div.className = 'card clickable';
+      div.style.flexDirection = 'column';
+      div.innerHTML = `
+        <div style="font-weight:bold; color:${color}; font-size:16px; margin-bottom:4px;">${cat.icon} ${budget.name}</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Потрачено: <span style="font-weight:bold; color:var(--accent);">${formatCurrency(spent)}</span></div>
+        <div class="goal-progress" style="height:6px; background:rgba(255,255,255,0.1);">
+          <div class="goal-progress-bar" style="width:${percent}%; background:${color};"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:4px;">
+          <div>Остаток: <span style="font-weight:bold; color:${remaining >= 0 ? 'inherit' : 'var(--accent)'}">${formatCurrency(remaining)}</span> / ${formatCurrency(budget.amount)}</div>
+          <div>${Math.round(percent)}%</div>
+        </div>
+      `;
+      budgetList.appendChild(div);
+    });
+  }
+  
+  // Обновление списка целей
+  function updateGoalsList() {
+    const goalsList = document.getElementById('goalsList');
+    goalsList.innerHTML = '';
+  
+    if (state.goals.length === 0) {
+      goalsList.innerHTML = '<div class="small" style="color:var(--muted)">Нет активных целей.</div>';
+      return;
+    }
+  
+    state.goals.forEach(goal => {
+      const percent = Math.min(100, (goal.current / goal.target) * 100);
+      const remaining = goal.target - goal.current;
+      const color = 'var(--goal-color)';
+  
+      const div = document.createElement('div');
+      div.className = 'goal-card clickable';
+      div.setAttribute('data-id', goal.id);
+      div.innerHTML = `
+        <div class="goal-title">${goal.name}</div>
+        <div class="goal-progress">
+          <div class="goal-progress-bar" style="width:${percent}%; background:${color};"></div>
+        </div>
+        <div class="goal-meta">
+          <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
+          <span>${Math.round(percent)}% ${remaining > 0 ? `(${formatCurrency(remaining)} осталось)` : ''}</span>
+        </div>
+      `;
+      goalsList.appendChild(div);
+    });
+  }
+  
+  // Обновление вью "Долги"
+  function updateDebtsView() {
+    const owedList = document.getElementById('owedDebtsList');
+    const mineList = document.getElementById('mineDebtsList');
+    const historyList = document.getElementById('debtHistoryList');
+    let totalOwed = 0;
+    let totalMine = 0;
+  
+    owedList.innerHTML = '';
+    mineList.innerHTML = '';
+    historyList.innerHTML = '';
+  
+    const activeDebts = state.debts.filter(d => d.amount !== 0);
+    const owedDebts = activeDebts.filter(d => d.type === 'owed');
+    const mineDebts = activeDebts.filter(d => d.type === 'mine');
+    
+    totalOwed = owedDebts.reduce((sum, d) => sum + d.amount, 0);
+    totalMine = mineDebts.reduce((sum, d) => sum + d.amount, 0);
+  
+    document.getElementById('totalOwed').textContent = formatCurrency(totalOwed);
+    document.getElementById('totalMine').textContent = formatCurrency(totalMine);
+  
+    if (owedDebts.length === 0) owedList.innerHTML = '<div class="small" style="color:var(--muted)">Нет активных долгов, которые вам должны.</div>';
+    owedDebts.forEach(d => owedList.appendChild(createDebtCard(d)));
+  
+    if (mineDebts.length === 0) mineList.innerHTML = '<div class="small" style="color:var(--muted)">Нет активных долгов, которые вы должны.</div>';
+    mineDebts.forEach(d => mineList.appendChild(createDebtCard(d)));
+  
+    // Обновление истории долгов (транзакции)
+    const debtTxns = state.transactions.filter(t => t.debtId);
+    if (debtTxns.length === 0) {
+      historyList.innerHTML = '<div class="small" style="color:var(--muted)">История транзакций, связанных с долгами, будет отображаться здесь.</div>';
+    } else {
+      debtTxns.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+        const debt = state.debts.find(d => d.id === t.debtId);
+        if (!debt) return;
+        const isReceived = debt.type === 'owed' && t.amount > 0;
+        const isRepaid = debt.type === 'mine' && t.amount < 0;
+        const action = isReceived ? 'Получено' : isRepaid ? 'Погашено' : 'Действие с долгом';
+        const amountStr = formatCurrency(Math.abs(t.amount));
+        const colorClass = isReceived ? 'received' : isRepaid ? 'repaid' : '';
+  
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `
+          <span class="h-date">${new Date(t.date).toLocaleDateString('ru-RU')}</span>
+          <span class="h-name">${debt.name} (${action})</span>
+          <span class="h-amount ${colorClass}">${isReceived ? '+' : '−'} ${amountStr}</span>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+  }
+  
+  // Создание карточки долга
+  function createDebtCard(debt) {
+    const div = document.createElement('div');
+    div.className = 'debt-card';
+    div.setAttribute('data-id', debt.id);
+    div.addEventListener('click', () => openDebtActionModal(debt.id));
+    
+    const typeClass = debt.type === 'owed' ? 'owed' : 'mine';
+    
+    div.innerHTML = `
+      <div class="debt-info">
+        <div class="debt-name">${debt.name}</div>
+        <div class="debt-meta">С ${new Date(debt.date).toLocaleDateString('ru-RU')}</div>
+      </div>
+      <div class="debt-amount ${typeClass}">${formatCurrency(Math.abs(debt.amount))}</div>
+      <button class="debt-actions">...</button>
+    `;
+    return div;
+  }
+  
+  // Открытие модального окна действий с долгом
+  function openDebtActionModal(debtId) {
+    state.activeDebt = state.debts.find(d => d.id === debtId);
+    if (!state.activeDebt) return;
+  
+    // Обновление селекта счетов
+    const select = document.getElementById('debtActionAccount');
+    select.innerHTML = state.accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+  
+    document.getElementById('debtActionAmount').value = Math.abs(state.activeDebt.amount);
+    document.getElementById('owedActions').style.display = state.activeDebt.type === 'owed' ? 'flex' : 'none';
+    document.getElementById('mineActions').style.display = state.activeDebt.type === 'mine' ? 'flex' : 'none';
+  
+    toggleModal('debtModal', true);
+  }
+  
+  // Обработка закрытия/отмены модальных окон
+  function closeAllModals() {
+    toggleModal('rulesModal', false);
+    toggleModal('settingsModal', false);
+    toggleModal('debtModal', false);
+    toggleModal('newDebtModal', false);
+    toggleModal('goalsModal', false);
+  }
+  
+  /* ==============================================
+    ЛОГИКА ДАННЫХ (STATE MANIPULATION)
+    ============================================== */
+  
+  // Сохранение состояния
+  async function saveState() {
+    await db.save(state);
+  }
+  
+  // Загрузка состояния
+  async function loadState() {
+    const loaded = await db.load();
+    if (loaded) {
+      // Слияние загруженных данных с дефолтным состоянием для обеспечения наличия всех полей
+      state = { ...defaultState, ...loaded };
+    } else {
+      state = defaultState;
+    }
+    // Инициализация первого рендера
+    changeTab(state.activeTab);
+  }
+  
+  // Общая логика транзакции
+  function addTransaction(amount, note, catId, accountId, date = today(), debtId = null, ruleId = null) {
+    amount = Number(amount);
+    if (isNaN(amount) || amount === 0) return false;
+  
+    // 1. Обновление баланса счета
+    const account = state.accounts.find(a => a.id === accountId);
+    if (account) {
+      account.balance += amount;
+    }
+  
+    // 2. Создание и добавление транзакции
+    const newTxn = {
+      id: uid(),
+      date: date,
+      amount: amount,
+      note: note,
+      catId: catId,
+      accountId: accountId,
+      debtId: debtId,
+      ruleId: ruleId
+    };
+    state.transactions.push(newTxn);
+  
+    // 3. Обновление текущего баланса цели, если применимо (простая логика: все доходы и расходы - это просто изменение баланса)
+    // Более продвинутая логика для целей может быть добавлена здесь
+  
+    saveState();
+    updateAccountsView();
+    return true;
+  }
+  
+  // Рассчитать общий баланс на определенную дату
+  function calculateBalance(dateStr) {
+    const initialBalance = state.accounts.reduce((sum, acc) => sum + acc.initial, 0);
+    
+    const txnsUpToDate = state.transactions.filter(txn => txn.date <= dateStr);
+    const txnsSum = txnsUpToDate.reduce((sum, txn) => sum + txn.amount, 0);
+  
+    return initialBalance + txnsSum;
+  }
+  
+  // Применение правил (автоплатежей)
+  function applyRules() {
+    const now = new Date();
+    state.rules.forEach(rule => {
+      let nextDate = new Date(rule.nextDate + 'T00:00:00');
+      
+      while (nextDate <= now) {
+        // Добавить транзакцию
+        const amount = rule.type === 'expense' ? -Math.abs(Number(rule.amount)) : Math.abs(Number(rule.amount));
+        addTransaction(
+          amount,
+          rule.name,
+          rule.catId,
+          state.accounts[0]?.id, // Используем первый счет по умолчанию
+          nextDate.toISOString().slice(0, 10),
+          null,
+          rule.id
+        );
+  
+        // Обновление nextDate
+        if (rule.frequency === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+        else if (rule.frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+        else if (rule.frequency === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+        
+        rule.nextDate = nextDate.toISOString().slice(0, 10);
+      }
+    });
+    saveState();
+  }
+  
+  /* ==============================================
+    ЛОГИКА ГРАФИКОВ (CHART.JS)
+    ============================================== */
+  
+  let miniChart, doughnutChart, lineChart;
+  
+  function updateMiniChart() {
+    const canvas = document.getElementById('miniCanvas');
+    if (!canvas) return;
+  
+    const dataPoints = [];
+    const todayDate = new Date(state.currentDate);
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(todayDate);
+      date.setDate(todayDate.getDate() - i);
+      const dateStr = date.toISOString().slice(0, 10);
+      dataPoints.push({
+        date: dateStr,
+        balance: calculateBalance(dateStr)
+      });
+    }
+  
+    if (miniChart) miniChart.destroy();
+  
+    miniChart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: dataPoints.map(p => p.date.slice(5)),
+        datasets: [{
+          label: 'Баланс',
+          data: dataPoints.map(p => p.balance),
+          borderColor: 'var(--accent-2)',
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 2,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: {
+          x: { display: false, grid: { display: false } },
+          y: { display: false, grid: { display: false } }
+        }
+      }
+    });
+  }
+  
+  function updateExpensesView() {
+    const monthKey = getMonthKey(state.currentDate);
+    const monthTxns = state.transactions.filter(t => getMonthKey(t.date) === monthKey && t.amount < 0);
+    const totalExpense = monthTxns.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+    const categoryExpenses = monthTxns.reduce((acc, txn) => {
+      const cat = state.categories.find(c => c.id === txn.catId);
+      if (cat && cat.type === 'expense') {
+        acc[cat.name] = acc[cat.name] || { amount: 0, count: 0, catId: cat.id };
+        acc[cat.name].amount += Math.abs(txn.amount);
+        acc[cat.name].count++;
+      }
+      return acc;
+    }, {});
+  
+    // 1. Диаграмма Пончика (Doughnut Chart)
+    const doughnutData = Object.keys(categoryExpenses).map(name => ({
+      label: name,
+      amount: categoryExpenses[name].amount
+    }));
+  
+    if (doughnutChart) doughnutChart.destroy();
+    const doughnutCanvas = document.getElementById('expenseDoughnutChart');
+    if (doughnutCanvas && doughnutData.length > 0) {
+      doughnutChart = new Chart(doughnutCanvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: doughnutData.map(d => d.label),
+          datasets: [{
+            data: doughnutData.map(d => d.amount),
+            backgroundColor: doughnutData.map(d => getColor(d.label)),
+            hoverOffset: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: 'var(--text)' } },
+            tooltip: { callbacks: { label: (context) => `${context.label}: ${formatCurrency(context.parsed)}` } }
+          }
+        }
+      });
+    }
+  
+    // 2. Линейный график (Line Chart)
+    const lineData = getMonthlyExpenseData(6);
+    if (lineChart) lineChart.destroy();
+    const lineCanvas = document.getElementById('expenseLineChart');
+    if (lineCanvas) {
+      lineChart = new Chart(lineCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: lineData.map(d => d.month),
+          datasets: [{
+            label: 'Расходы',
+            data: lineData.map(d => d.expense),
+            borderColor: 'var(--accent)',
+            tension: 0.3,
+            backgroundColor: 'rgba(214, 40, 40, 0.2)',
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}` } }
+          },
+          scales: {
+            x: { grid: { color: 'var(--glass)' }, ticks: { color: 'var(--muted)' } },
+            y: { grid: { color: 'var(--glass)' }, ticks: { color: 'var(--muted)' } }
+          }
+        }
+      });
+    }
+  
+    // 3. Таблица расходов по категориям
+    const tableBody = document.getElementById('categoryTableBody');
+    tableBody.innerHTML = '';
+  
+    const sortedCategories = Object.keys(categoryExpenses).sort((a, b) => categoryExpenses[b].amount - categoryExpenses[a].amount);
+  
+    if (sortedCategories.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="4" class="small" style="color:var(--muted); text-align:center;">Нет данных о расходах за текущий месяц.</td></tr>';
+    } else {
+      sortedCategories.forEach(name => {
+        const data = categoryExpenses[name];
+        const percent = totalExpense > 0 ? ((data.amount / totalExpense) * 100).toFixed(1) : 0;
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+          <td><span class="category-name">${state.categories.find(c => c.id === data.catId)?.icon} ${name}</span></td>
+          <td>${data.count}</td>
+          <td><span class="category-amount">−${formatCurrency(data.amount)}</span></td>
+          <td>${percent}%</td>
+        `;
+      });
+    }
+  }
+  
+  function getMonthlyExpenseData(monthsCount) {
+    const data = [];
+    const currentDate = new Date(state.currentDate);
+  
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const monthDate = new Date(currentDate);
+      monthDate.setMonth(currentDate.getMonth() - i);
+      const monthKey = getMonthKey(monthDate.toISOString());
+      const monthName = monthDate.toLocaleString('ru-RU', { month: 'short' });
+  
+      const expense = state.transactions
+        .filter(t => getMonthKey(t.date) === monthKey && t.amount < 0)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+      data.push({ month: monthName, expense: expense });
+    }
+    return data;
+  }
+  
+  /* ==============================================
+    ОБРАБОТЧИКИ СОБЫТИЙ (EVENT LISTENERS)
+    ============================================== */
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    // Загрузка и инициализация
+    loadState().then(() => {
+      applyRules(); // Применить все правила после загрузки
+      changeTab(state.activeTab); // Перерендерить активную вкладку
+    });
+  
+    // -------------------- ТАБЫ --------------------
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', (e) => changeTab(e.target.dataset.tab));
+    });
+  
+    // -------------------- МОДАЛЬНЫЕ ОКНА: ОБЩЕЕ --------------------
+    document.getElementById('modalOverlay').addEventListener('click', closeAllModals);
+  
+    // -------------------- БЫСТРЫЙ ВВОД --------------------
+    document.getElementById('qAdd').addEventListener('click', () => {
+      const amount = Number(document.getElementById('qAmount').value);
+      const note = document.getElementById('qNote').value;
+      const catId = document.getElementById('qCat').value;
+      const accountId = document.getElementById('qAccount').value;
+      
+      if (!amount || !catId || !accountId) return alert('Введите сумму, выберите категорию и счет.');
+  
+      const cat = state.categories.find(c => c.id === catId);
+      const finalAmount = cat.type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+  
+      if (addTransaction(finalAmount, note, catId, accountId)) {
+        document.getElementById('qAmount').value = '';
+        document.getElementById('qNote').value = '';
+        updateAccountsView();
+      }
+    });
+  
+    // Кнопка FAB
+    document.getElementById('openAdd').addEventListener('click', () => {
+      changeTab('accounts');
+      document.getElementById('qAmount').focus();
+    });
+  
+    // Фильтр транзакций
+    document.getElementById('filter').addEventListener('input', updateTxnList);
+  
+    // Переключение периода обзора
+    document.getElementById('summaryPeriodToggle').addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        document.querySelectorAll('#summaryPeriodToggle button').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        state.currentPeriod = e.target.dataset.period;
+        updateAccountsView();
+        saveState();
+      }
+    });
+  
+    // -------------------- МОДАЛЬНЫЕ ОКНА: ДОЛГИ --------------------
+    document.getElementById('closeDebtModal').addEventListener('click', () => toggleModal('debtModal', false));
+    document.getElementById('closeNewDebtModal').addEventListener('click', () => toggleModal('newDebtModal', false));
+  
+    document.getElementById('newOwedDebtBtn').addEventListener('click', () => {
+      document.getElementById('newDebtTitle').textContent = 'Новый Долг (Мне должны)';
+      document.getElementById('saveNewDebtBtn').setAttribute('data-type', 'owed');
+      toggleModal('newDebtModal', true);
+    });
+  
+    document.getElementById('newMineDebtBtn').addEventListener('click', () => {
+      document.getElementById('newDebtTitle').textContent = 'Новый Долг (Я должен)';
+      document.getElementById('saveNewDebtBtn').setAttribute('data-type', 'mine');
+      toggleModal('newDebtModal', true);
+    });
+  
+    document.getElementById('saveNewDebtBtn').addEventListener('click', (e) => {
+      const type = e.target.dataset.type;
+      const amount = Number(document.getElementById('newDebtAmount').value);
+      const name = document.getElementById('newDebtName').value;
+  
+      if (!amount || !name) return alert('Введите сумму и имя/описание.');
+  
+      const newDebt = {
+        id: uid(),
+        name: name,
+        amount: amount,
+        type: type,
+        date: today()
+      };
+      state.debts.push(newDebt);
+      saveState();
+      updateDebtsView();
+      toggleModal('newDebtModal', false);
+      document.getElementById('newDebtAmount').value = '';
+      document.getElementById('newDebtName').value = '';
+    });
+  
+    // Действия с долгами (Погасить/Получить/Простить)
+    function handleDebtAction(actionType) {
+      if (!state.activeDebt) return;
+      const amount = Number(document.getElementById('debtActionAmount').value);
+      const accountId = document.getElementById('debtActionAccount').value;
+      const note = document.getElementById('debtActionName').value;
+      
+      if (!amount || !accountId) return alert('Введите сумму и выберите счет.');
+  
+      let txnAmount = 0;
+      let catName = '';
+  
+      if (actionType === 'receive') { // Мне должны, и я получаю деньги
+        txnAmount = Math.min(amount, state.activeDebt.amount);
+        state.activeDebt.amount -= txnAmount;
+        catName = 'Погашение долга (Вам)';
+      } else if (actionType === 'repay') { // Я должен, и я плачу
+        txnAmount = -Math.min(amount, state.activeDebt.amount);
+        state.activeDebt.amount -= txnAmount; // -(-X) = +X
+        catName = 'Погашение долга (Ваш)';
+      } else if (actionType === 'forgive' || actionType === 'askForgive') {
+        state.activeDebt.amount = 0; // Удалить/обнулить
+        // Нет транзакции, т.к. это прощение/удаление
+        saveState(); updateDebtsView(); toggleModal('debtModal', false);
+        return;
+      } else { return; }
+  
+      // Найти или создать категорию "Долги"
+      let debtCat = state.categories.find(c => c.name === 'Долги');
+      if (!debtCat) {
+        debtCat = { id: uid(), name: 'Долги', type: 'expense', icon: '⚖️' };
+        state.categories.push(debtCat);
+      }
+  
+      addTransaction(txnAmount, note || catName, debtCat.id, accountId, today(), state.activeDebt.id);
+      saveState();
+      updateDebtsView();
+      updateAccountsView();
+      toggleModal('debtModal', false);
+    }
+  
+    document.getElementById('debtReceiveBtn').addEventListener('click', () => handleDebtAction('receive'));
+    document.getElementById('debtForgiveBtn').addEventListener('click', () => handleDebtAction('forgive'));
+    document.getElementById('debtRepayBtn').addEventListener('click', () => handleDebtAction('repay'));
+    document.getElementById('debtAskForgiveBtn').addEventListener('click', () => handleDebtAction('askForgive'));
+  
+    // -------------------- МОДАЛЬНЫЕ ОКНА: НАСТРОЙКИ --------------------
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      // Обновление списков настроек
+      // Категории
+      const catList = document.getElementById('categoryList');
+      catList.innerHTML = state.categories.map(c => `
+        <div class="card" data-id="${c.id}">
+          <div>${c.icon} ${c.name}</div>
+          <button style="color:var(--accent)">✕</button>
+        </div>
+      `).join('');
+      // Счета
+      const accList = document.getElementById('accountSettingsList');
+      accList.innerHTML = state.accounts.map(a => `
+        <div class="card" data-id="${a.id}">
+          <div>${a.name} (${formatCurrency(a.balance)})</div>
+          <button style="color:var(--accent)">✕</button>
+        </div>
+      `).join('');
+      // Бюджеты (упрощенно)
+      const budList = document.getElementById('budgetSettingsList');
+      budList.innerHTML = state.budgets.map(b => `
+        <div class="card" data-id="${b.id}">
+          <div>${b.name} (${formatCurrency(b.amount)})</div>
+          <button style="color:var(--accent)">✕</button>
+        </div>
+      `).join('');
+  
+      toggleModal('settingsModal', true);
+    });
+    document.getElementById('closeSettings').addEventListener('click', closeAllModals);
+  
+    // Добавить новую категорию
+    document.getElementById('newCatBtn').addEventListener('click', () => {
+      const name = prompt('Введите название категории:');
+      if (name) {
+        const type = confirm('Это Доход (ОК) или Расход (Отмена)?') ? 'income' : 'expense';
+        state.categories.push({ id: uid(), name, type, icon: '💡' });
+        saveState();
+        document.getElementById('settingsBtn').click(); // Переоткрыть модальное окно
+      }
+    });
+  
+    // Удалить элемент из настроек (упрощенно: удаляет из списка, без проверки связанных транзакций)
+    document.getElementById('settingsModal').addEventListener('click', (e) => {
+      if (e.target.textContent === '✕') {
+        const card = e.target.closest('.card');
+        if (!card) return;
+        const id = card.dataset.id;
+  
+        if (card.closest('#categoryList')) state.categories = state.categories.filter(c => c.id !== id);
+        else if (card.closest('#accountSettingsList')) state.accounts = state.accounts.filter(a => a.id !== id);
+        else if (card.closest('#budgetSettingsList')) state.budgets = state.budgets.filter(b => b.id !== id);
+  
+        saveState();
+        document.getElementById('settingsBtn').click();
+      }
+    });
+  
+    // Добавить новый счет (упрощенно)
+    document.getElementById('newAccBtn').addEventListener('click', () => {
+      const name = prompt('Введите название счета:');
+      const balance = Number(prompt('Введите начальный баланс (0):') || 0);
+      if (name) {
+        state.accounts.push({ id: uid(), name, balance, initial: balance });
+        saveState();
+        document.getElementById('settingsBtn').click();
+      }
+    });
+  
+    // Добавить новый бюджет (упрощенно)
+    document.getElementById('newBudgetBtn').addEventListener('click', () => {
+      const name = prompt('Введите название бюджета:');
+      const amount = Number(prompt('Введите целевую сумму бюджета:'));
+      const catId = prompt(`Введите ID категории (например, ${state.categories[0]?.id})`); // Упрощенный выбор
+      
+      if (name && amount && catId) {
+        state.budgets.push({ id: uid(), name, amount, catId });
+        saveState();
+        document.getElementById('settingsBtn').click();
+      }
+    });
+  
+    // -------------------- МОДАЛЬНЫЕ ОКНА: ПРАВИЛА (АВТОПЛАТЕЖИ) --------------------
+    document.getElementById('rulesBtn').addEventListener('click', () => {
+      updateRulesList();
+      toggleModal('rulesModal', true);
+    });
+    document.getElementById('closeRules').addEventListener('click', closeAllModals);
+  
+    document.getElementById('newRuleBtn').addEventListener('click', () => {
+      document.getElementById('newRuleForm').style.display = 'block';
+      document.getElementById('newRuleBtn').style.display = 'none';
+      document.getElementById('ruleNextDate').value = today();
+      document.getElementById('ruleName').value = '';
+      document.getElementById('ruleAmount').value = '';
+    });
+  
+    document.getElementById('cancelRuleBtn').addEventListener('click', () => {
+      document.getElementById('newRuleForm').style.display = 'none';
+      document.getElementById('newRuleBtn').style.display = 'block';
+    });
+  
+    document.getElementById('saveRuleBtn').addEventListener('click', () => {
+      const name = document.getElementById('ruleName').value;
+      const amount = Number(document.getElementById('ruleAmount').value);
+      const type = document.getElementById('ruleType').value;
+      const nextDate = document.getElementById('ruleNextDate').value;
+      const frequency = document.getElementById('ruleFrequency').value;
+  
+      if (!name || !amount || !nextDate) return alert('Заполните все поля!');
+  
+      state.rules.push({ id: uid(), name, amount, type, nextDate, frequency, catId: state.categories.find(c => c.type === type)?.id || state.categories[0]?.id });
+      saveState();
+      applyRules(); // Сразу применить новое правило
+      updateRulesList();
+      document.getElementById('cancelRuleBtn').click();
+    });
+  
+    document.getElementById('rulesList').addEventListener('click', (e) => {
+      if (e.target.textContent === '✕') {
+        const card = e.target.closest('.card');
+        state.rules = state.rules.filter(r => r.id !== card.dataset.id);
+        saveState();
+        updateRulesList();
+      }
+    });
+  
+    function updateRulesList() {
+      const rulesList = document.getElementById('rulesList');
+      rulesList.innerHTML = state.rules.map(r => `
+        <div class="card" data-id="${r.id}" style="padding:10px; border-color:var(--accent-2);">
+          <div>
+            <div style="font-weight:bold; color:${r.type === 'expense' ? 'var(--accent)' : 'var(--accent-2)'}">${r.name}</div>
+            <div class="small" style="color:var(--muted)">${r.frequency === 'monthly' ? 'Ежемесячно' : r.frequency === 'weekly' ? 'Еженедельно' : 'Ежегодно'} | След. ${new Date(r.nextDate).toLocaleDateString('ru-RU')}</div>
+          </div>
+          <div style="font-size:18px; font-weight:bold; color:${r.type === 'expense' ? 'var(--accent)' : 'var(--accent-2)'}">${r.type === 'expense' ? '−' : '+'}${formatCurrency(r.amount)}</div>
+          <button style="color:var(--accent); margin-left:8px;">✕</button>
+        </div>
+      `).join('') || '<div class="small" style="color:var(--muted); text-align:center;">Нет активных правил.</div>';
+    }
+  
+    // -------------------- МОДАЛЬНЫЕ ОКНА: ЦЕЛИ --------------------
+    document.getElementById('openGoalsBtn').addEventListener('click', () => {
+      updateGoalsSettingsList();
+      toggleModal('goalsModal', true);
+    });
+    document.getElementById('closeGoalsModal').addEventListener('click', closeAllModals);
+  
+    document.getElementById('newGoalBtn').addEventListener('click', () => {
+      document.getElementById('newGoalForm').style.display = 'block';
+      document.getElementById('newGoalBtn').style.display = 'none';
+    });
+    document.getElementById('cancelGoalBtn').addEventListener('click', () => {
+      document.getElementById('newGoalForm').style.display = 'none';
+      document.getElementById('newGoalBtn').style.display = 'block';
+    });
+  
+    document.getElementById('saveGoalBtn').addEventListener('click', () => {
+      const name = document.getElementById('goalName').value;
+      const target = Number(document.getElementById('goalTarget').value);
+      const current = Number(document.getElementById('goalCurrent').value);
+  
+      if (!name || !target) return alert('Заполните название и целевую сумму!');
+  
+      state.goals.push({ id: uid(), name, target, current, date: today() });
+      saveState();
+      updateGoalsSettingsList();
+      updateGoalsList();
+      document.getElementById('cancelGoalBtn').click();
+    });
+  
+    document.getElementById('goalsSettingsList').addEventListener('click', (e) => {
+      if (e.target.textContent === '✕') {
+        const card = e.target.closest('.card');
+        state.goals = state.goals.filter(g => g.id !== card.dataset.id);
+        saveState();
+        updateGoalsSettingsList();
+        updateGoalsList();
+      }
+    });
+  
+    function updateGoalsSettingsList() {
+      const goalsSettingsList = document.getElementById('goalsSettingsList');
+      goalsSettingsList.innerHTML = state.goals.map(g => {
+        const percent = Math.min(100, (g.current / g.target) * 100);
+        return `
+          <div class="card" data-id="${g.id}" style="padding:10px; border-color:var(--goal-color); flex-direction:column; align-items:flex-start;">
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:bold; color:var(--goal-color)">${g.name}</div>
+              <button style="color:var(--accent); margin-left:8px;">✕</button>
+            </div>
+            <div class="small" style="color:var(--muted)">${formatCurrency(g.current)} / ${formatCurrency(g.target)} (${Math.round(percent)}%)</div>
+          </div>
+        `;
+      }).join('') || '<div class="small" style="color:var(--muted); text-align:center;">Нет активных целей.</div>';
+    }
+  });
+})();
+</script>
+</body>
+</html>
