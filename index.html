@@ -86,6 +86,13 @@
   .modal{ position:fixed; left:50%; transform:translateX(-50%); top:12%; background:var(--bg); padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,0.08); box-shadow:0 12px 30px rgba(0,0,0,0.8); z-index:999; max-height:80vh; overflow-y:auto; max-width:550px; width:95%;}
   .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--glass);}
 
+  /* Динамические позиции для модальных окон (стек) */
+  #rulesModal { top: 5%; }
+  #settingsModal { top: 15%; }
+  #debtModal { top: 25%; }
+  #newDebtModal { top: 35%; }
+  #goalsModal { top: 45%; }
+
   /*
   ==============================================
   АДАПТИВНАЯ СЕТКА (при активной вкладке "Счета" или "Расходы")
@@ -192,6 +199,172 @@
   .category-table td .category-amount { color:var(--accent); font-weight:bold; }
   .category-table tr:hover { background:rgba(255,255,255,0.05); }
   .chart-container { max-width: 100%; height: 250px; position:relative; } /* Для холста Chart.js */
+
+/* ===== Mobile fix: Expenses analysis ===== */
+@media (max-width: 768px) {
+
+  /* убираем горизонтальный скролл */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* все контейнеры анализов — в колонку */
+  .expenses-grid,
+  .analysis-row,
+  .analysis-grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* карточки не шире экрана */
+  .card,
+  .analysis-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* canvas / диаграммы */
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* таблицы */
+  table {
+    width: 100% !important;
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+#leftCol,
+#centerCol,
+#rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+/* === Финансовые сигналы === */
+
+.signals {
+  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(160deg, #141216, #100e14);
+}
+
+.signals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.signals-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Статус */
+.signals-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.signals-status.ok {
+  background: rgba(131,56,236,0.15);
+  color: var(--accent-2);
+}
+
+.signals-status.warn {
+  background: rgba(255,190,11,0.15);
+  color: #ffbe0b;
+}
+
+.signals-status.bad {
+  background: rgba(214,40,40,0.15);
+  color: var(--accent);
+}
+
+/* Сетка */
+.signals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.signal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.signal-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.signal-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.signal-value.big {
+  font-size: 22px;
+}
+
+.signal-value.expense {
+  color: var(--accent);
+}
+
+.signal-value.muted {
+  color: var(--muted);
+}
+
+/* Мобилка */
+@media (max-width: 480px) {
+  .signals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === Обзор + Сигналы: 50 / 50 === */
+.overview-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* чтобы блоки не схлопывались */
+.overview-row .summary-block {
+  height: 100%;
+}
+
+/* адаптив */
+@media (max-width: 900px) {
+  .overview-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 </style>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
@@ -355,38 +528,6 @@
     </div>
             <div id="accountsView">
       <div class="grid">
-      
-        <div id="centerCol">
-          <div class="balance-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-              <div><div class="small" id="monthLabel">Январь</div><div style="font-size:20px; font-weight:bold; color:var(--accent-2)">+ <span id="topIncome">0,00₽</span></div></div>
-              <div style="font-size:20px; font-weight:bold; color:var(--accent)">− <span id="topExpense">0,00₽</span></div>
-            </div>
-
-            <div class="quick-input">
-              <input id="qAmount" class="amount" type="number" placeholder="Сумма" />
-              <input id="qNote" type="text" placeholder="Комментарий" />
-              <select id="qCat"></select>
-              <select id="qAccount"></select>
-            </div>
-            
-            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;justify-content:space-between;width:100%">
-              <div class="small" id="quickStats">Транзакций: <span id="txnCount">0</span></div>
-              <div style="display:flex;gap:8px">
-                <button id="qAdd" style="background:var(--accent-2); color:#fff;">Добавить</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="card" style="margin-top:16px">
-            <div style="width:100%;display:flex;justify-content:space-between;align-items:center">
-              <div><div class="small">Бюджеты (месяц)</div></div>
-            </div>
-            <div class="list" id="budgetList" style="margin-top:10px">
-              <div class="small" style="color:var(--muted)">Нет активных бюджетов.</div>
-            </div>
-          </div>
-        </div>
         
         <div class="left-col" id="leftCol">
           <div class="balance-card">
@@ -420,43 +561,31 @@
             </div>
           </div>
 
-          <div class="card">
-            <div style="width:100%"><div class="small">Баланс за 30 дней</div>
-              <div class="chart-container" style="height:120px;"><canvas id="miniCanvas"></canvas></div>
+        
+        </div>
+
+        <div id="centerCol">
+          <div class="balance-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+              <div><div class="small" id="monthLabel">Январь</div><div style="font-size:20px; font-weight:bold; color:var(--accent-2)">+ <span id="topIncome">0,00₽</span></div></div>
+              <div style="font-size:20px; font-weight:bold; color:var(--accent)">− <span id="topExpense">0,00₽</span></div>
+            </div>
+
+            <div class="quick-input">
+              <input id="qAmount" class="amount" type="number" placeholder="Сумма" />
+              <input id="qNote" type="text" placeholder="Комментарий" />
+              <select id="qCat"></select>
+              <select id="qAccount"></select>
+            </div>
+            
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;justify-content:space-between;width:100%">
+              <div class="small" id="quickStats">Транзакций: <span id="txnCount">0</span></div>
+              <div style="display:flex;gap:8px">
+                <button id="qAdd" style="background:var(--accent-2); color:#fff;">Добавить</button>
+              </div>
             </div>
           </div>
         </div>
-
-        <div id="rightCol">
-          <div class="summary-block">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-              <div style="font-size:18px; font-weight:bold; color:var(--text)">Финансовый Обзор</div>
-              <div class="period-toggle" id="summaryPeriodToggle">
-                <button data-period="month" class="active">Месяц</button>
-                <button data-period="week">Неделя</button>
-              </div>
-            </div>
-            <div class="summary-item total">
-              <div class="label">Остаток на начало <span id="summaryPeriodName">месяца</span></div>
-              <div class="value" id="startBalance">0,00₽</div>
-            </div>
-            <div class="summary-item income">
-              <div class="label">Поступления (<span id="summaryIncomeLabel">за месяц</span>)</div>
-              <div class="value" id="summaryIncome">+0,00₽</div>
-            </div>
-            <div class="summary-item expense">
-              <div class="label">Расходы (<span id="summaryExpenseLabel">за месяц</span>)</div>
-              <div class="value" id="summaryExpense">−0,00₽</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">Обязательные (Авто-) траты</div>
-              <div class="value" id="summaryRulesExpense" style="color:var(--accent)">−0,00₽</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">Ожидаемый чистый остаток</div>
-              <div class="value" id="summaryNetBalance" style="font-size:22px;">0,00₽</div>
-            </div>
-          </div>
 
           <div class="summary-block" style="border-color:var(--goal-color)">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -467,22 +596,81 @@
               <div class="small" style="color:var(--muted)">Нет активных целей.</div>
             </div>
           </div>
-          
-          <div class="card" style="margin-top:0">
-            <div style="width:100%;display:flex;justify-content:space-between;align-items:center; margin-bottom:12px;">
-              <div><div class="small">Последние Транзакции</div></div>
-              <div><input id="filter" placeholder="Поиск" class="input-like" style="width:140px; padding:8px 10px;" /></div>
-            </div>
-            <div class="txn-list" id="txnList">
-              <div class="small" style="color:var(--muted)">Нет транзакций за выбранный период.</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
         
         <div id="expensesView" class="hidden">
             <div class="balance-card">
+              <div class="overview-row">
+
+              <div class="summary-block">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:18px; font-weight:bold; color:var(--text)">Финансовый Обзор</div>
+        <div class="period-toggle" id="summaryPeriodToggle">
+          <button data-period="month" class="active">Месяц</button>
+          <button data-period="week">Неделя</button>
+        </div>
+      </div>
+
+      <div class="summary-item total">
+        <div class="label">Остаток на начало <span id="summaryPeriodName">месяца</span></div>
+        <div class="value" id="startBalance">0,00₽</div>
+      </div>
+
+      <div class="summary-item income">
+        <div class="label">Поступления (<span id="summaryIncomeLabel">за месяц</span>)</div>
+        <div class="value" id="summaryIncome">+0,00₽</div>
+      </div>
+
+      <div class="summary-item expense">
+        <div class="label">Расходы (<span id="summaryExpenseLabel">за месяц</span>)</div>
+        <div class="value" id="summaryExpense">−0,00₽</div>
+      </div>
+
+      <div class="summary-item">
+        <div class="label">Обязательные (Авто-) траты</div>
+        <div class="value" id="summaryRulesExpense" style="color:var(--accent)">−0,00₽</div>
+      </div>
+
+      <div class="summary-item">
+        <div class="label">Ожидаемый чистый остаток</div>
+        <div class="value" id="summaryNetBalance" style="font-size:22px;">0,00₽</div>
+      </div>
+    </div>
+
+    <!-- ПРАВО: Финансовые сигналы -->
+    <div class="summary-block signals">
+      <div class="signals-header">
+        <div class="signals-title">Финансовые сигналы</div>
+        <div class="signals-status ok" id="financeStatus">Норма</div>
+      </div>
+
+      <div class="signals-grid">
+        <div class="signal">
+          <div class="signal-label">Самая затратная категория</div>
+          <div class="signal-value" id="topCategory">—</div>
+        </div>
+
+        <div class="signal">
+          <div class="signal-label">Средний расход / день</div>
+          <div class="signal-value expense" id="avgDailyExpense">—</div>
+        </div>
+
+        <div class="signal">
+          <div class="signal-label">Денег хватит примерно</div>
+          <div class="signal-value big" id="daysLeft">— дней</div>
+        </div>
+
+        <div class="signal">
+          <div class="signal-label">Ближайшее списание</div>
+          <div class="signal-value muted" id="nextRule">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
                 <div class="balance-title" style="margin-bottom:10px;">Анализ Расходов (Текущий Месяц)</div>
                 <div class="expense-summary-grid">
                     <div class="summary-block" style="margin-bottom:0;">
@@ -507,7 +695,6 @@
                 </div>
             </div>
     </div>
-        <button class="fab" id="openAdd" title="Добавить транзакцию">+</button>
   </div>
 
 <script>
@@ -554,8 +741,14 @@
   }
   
   function getMonthKey(dateStr) {
-    const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-    return d.toISOString().slice(0, 7);
+    if (!dateStr) return new Date().toISOString().slice(0, 7);
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 7);
+      return d.toISOString().slice(0, 7);
+    } catch (e) {
+      return new Date().toISOString().slice(0, 7);
+    }
   }
   
   const getColor = (() => {
@@ -735,7 +928,7 @@
   function updateSummary() {
     const now = new Date(state.currentDate);
     let startDate, endDate, periodName;
-  
+
     if (state.currentPeriod === 'month') {
       startDate = getStartOfMonth(state.currentDate);
       endDate = getEndOfMonth(state.currentDate);
@@ -745,58 +938,84 @@
       endDate = getEndOfWeek(state.currentDate);
       periodName = 'недели';
     }
-  
+
     const prevDate = new Date(startDate);
     prevDate.setDate(prevDate.getDate() - 1);
     const startBalance = calculateBalance(prevDate.toISOString().slice(0, 10));
-  
+
     const periodTxns = state.transactions.filter(txn => txn.date >= startDate && txn.date <= endDate);
     const periodIncome = periodTxns.filter(txn => txn.amount > 0).reduce((sum, txn) => sum + txn.amount, 0);
     const periodExpense = periodTxns.filter(txn => txn.amount < 0).reduce((sum, txn) => sum + txn.amount, 0);
-  
-    // Автоматические/обязательные траты
+
     const periodRulesExpense = state.rules.filter(rule => rule.type === 'expense').reduce((sum, rule) => {
-      // Простая логика: если правило активно и соответствует периоду
       return sum + (rule.nextDate && rule.nextDate <= endDate ? Number(rule.amount) : 0);
-    }, 0) * -1; // Расход, поэтому отрицательный
-  
+    }, 0) * -1;
+
     const netBalance = startBalance + periodIncome + periodExpense + periodRulesExpense;
-  
-    document.getElementById('summaryPeriodName').textContent = periodName;
-    document.getElementById('summaryIncomeLabel').textContent = `за ${periodName.replace(/а$/, '')}`;
-    document.getElementById('summaryExpenseLabel').textContent = `за ${periodName.replace(/а$/, '')}`;
-  
-    document.getElementById('startBalance').textContent = formatCurrency(startBalance);
-    document.getElementById('summaryIncome').textContent = formatCurrency(periodIncome);
-    document.getElementById('summaryExpense').textContent = formatCurrency(periodExpense);
-    document.getElementById('summaryRulesExpense').textContent = formatCurrency(periodRulesExpense);
-    document.getElementById('summaryNetBalance').textContent = formatCurrency(netBalance);
-  
+
+    const summaryPeriodNameEl = document.getElementById('summaryPeriodName');
+    const summaryIncomeLabelEl = document.getElementById('summaryIncomeLabel');
+    const summaryExpenseLabelEl = document.getElementById('summaryExpenseLabel');
+    
+    if (summaryPeriodNameEl) summaryPeriodNameEl.textContent = periodName;
+    if (summaryIncomeLabelEl) summaryIncomeLabelEl.textContent = `за ${periodName.replace(/а$/, '')}`;
+    if (summaryExpenseLabelEl) summaryExpenseLabelEl.textContent = `за ${periodName.replace(/а$/, '')}`;
+
+    const startBalEl = document.getElementById('startBalance');
+    const summaryIncomeEl = document.getElementById('summaryIncome');
+    const summaryExpenseEl = document.getElementById('summaryExpense');
+    const summaryRulesExpenseEl = document.getElementById('summaryRulesExpense');
+    const summaryNetBalanceEl = document.getElementById('summaryNetBalance');
+    
+    if (startBalEl) startBalEl.textContent = formatCurrency(startBalance);
+    if (summaryIncomeEl) summaryIncomeEl.textContent = formatCurrency(periodIncome);
+    if (summaryExpenseEl) summaryExpenseEl.textContent = formatCurrency(periodExpense);
+    if (summaryRulesExpenseEl) summaryRulesExpenseEl.textContent = formatCurrency(periodRulesExpense);
+    if (summaryNetBalanceEl) summaryNetBalanceEl.textContent = formatCurrency(netBalance);
+
     // Верхний блок в centerCol
-    document.getElementById('monthLabel').textContent = getMonthName(state.currentDate);
-    document.getElementById('topIncome').textContent = formatCurrency(periodIncome);
-    document.getElementById('topExpense').textContent = formatCurrency(periodExpense);
-    document.getElementById('txnCount').textContent = periodTxns.length;
-  
+    const monthLabelEl = document.getElementById('monthLabel');
+    const topIncomeEl = document.getElementById('topIncome');
+    const topExpenseEl = document.getElementById('topExpense');
+    const txnCountEl = document.getElementById('txnCount');
+    
+    if (monthLabelEl) monthLabelEl.textContent = getMonthName(state.currentDate);
+    if (topIncomeEl) topIncomeEl.textContent = formatCurrency(periodIncome);
+    if (topExpenseEl) topExpenseEl.textContent = formatCurrency(periodExpense);
+    if (txnCountEl) txnCountEl.textContent = periodTxns.length;
+
     // Обновление шкалы расходов/доходов
     const absIncome = Math.abs(periodIncome);
     const absExpense = Math.abs(periodExpense);
     const totalFlow = absIncome + absExpense;
     const incomePercent = totalFlow > 0 ? (absIncome / totalFlow) * 100 : 50;
     const expensePercent = totalFlow > 0 ? (absExpense / totalFlow) * 100 : 50;
-  
-    document.getElementById('monthBarExpense').style.width = `${expensePercent}%`;
-    document.getElementById('monthBarIncome').style.width = `${incomePercent}%`;
-    document.getElementById('monthIncome').textContent = formatCurrency(absIncome);
-    document.getElementById('monthExpense').textContent = formatCurrency(absExpense);
-  
-    // Прогноз
-    const avgDailyExpense = absExpense / new Date(endDate).getDate(); // Простая аппроксимация
-    const daysRemaining = (new Date(endDate).getTime() - now.getTime()) / (1000 * 3600 * 24);
-    const forecastBalance = totalBalance - (avgDailyExpense * daysRemaining);
-    document.getElementById('forecastDate').textContent = endDate;
-    document.getElementById('forecastBig').textContent = formatCurrency(forecastBalance);
-    document.getElementById('forecastBig').style.color = forecastBalance >= 0 ? 'var(--accent-2)' : 'var(--accent)';
+
+    const monthBarExpenseEl = document.getElementById('monthBarExpense');
+    const monthBarIncomeEl = document.getElementById('monthBarIncome');
+    const monthIncomeEl = document.getElementById('monthIncome');
+    const monthExpenseEl = document.getElementById('monthExpense');
+    
+    if (monthBarExpenseEl) monthBarExpenseEl.style.width = `${expensePercent}%`;
+    if (monthBarIncomeEl) monthBarIncomeEl.style.width = `${incomePercent}%`;
+    if (monthIncomeEl) monthIncomeEl.textContent = formatCurrency(absIncome);
+    if (monthExpenseEl) monthExpenseEl.textContent = formatCurrency(absExpense);
+
+    // Прогноз — используем реальный текущий баланс
+    const totalBalanceNow = state.accounts.reduce((sum, acc) => sum + (Number(acc.balance) || 0), 0);
+    const daysInPeriod = Math.max(1, new Date(endDate).getDate());
+    const avgDailyExpense = absExpense / daysInPeriod;
+    const daysRemaining = Math.max(0, Math.ceil((new Date(endDate).getTime() - now.getTime()) / (1000 * 3600 * 24)));
+    const forecastBalance = totalBalanceNow - (avgDailyExpense * daysRemaining);
+
+    const forecastDateEl = document.getElementById('forecastDate');
+    const forecastBigEl = document.getElementById('forecastBig');
+    
+    if (forecastDateEl) forecastDateEl.textContent = endDate;
+    if (forecastBigEl) {
+      forecastBigEl.textContent = formatCurrency(forecastBalance);
+      forecastBigEl.style.color = forecastBalance >= 0 ? 'var(--accent-2)' : 'var(--accent)';
+    }
   }
   
   // Обновление списка транзакций
@@ -1012,7 +1231,7 @@
   }
   
   /* ==============================================
-    ЛОГИКА ДАННЫХ (STATE MANIPULATION)
+    ЛОГИКА ДАННЫХ
     ============================================== */
   
   // Сохранение состояния
@@ -1282,325 +1501,496 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Загрузка и инициализация
     loadState().then(() => {
-      applyRules(); // Применить все правила после загрузки
-      changeTab(state.activeTab); // Перерендерить активную вкладку
+      applyRules();
+      changeTab(state.activeTab || 'accounts');
     });
-  
+
     // -------------------- ТАБЫ --------------------
     document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', (e) => changeTab(e.target.dataset.tab));
+      tab.addEventListener('click', (e) => changeTab(e.currentTarget.dataset.tab));
     });
-  
+
     // -------------------- МОДАЛЬНЫЕ ОКНА: ОБЩЕЕ --------------------
-    document.getElementById('modalOverlay').addEventListener('click', closeAllModals);
-  
+    const overlayEl = document.getElementById('modalOverlay');
+    if (overlayEl) {
+      overlayEl.addEventListener('click', closeAllModals);
+    }
+
     // -------------------- БЫСТРЫЙ ВВОД --------------------
-    document.getElementById('qAdd').addEventListener('click', () => {
-      const amount = Number(document.getElementById('qAmount').value);
-      const note = document.getElementById('qNote').value;
-      const catId = document.getElementById('qCat').value;
-      const accountId = document.getElementById('qAccount').value;
-      
-      if (!amount || !catId || !accountId) return alert('Введите сумму, выберите категорию и счет.');
-  
-      const cat = state.categories.find(c => c.id === catId);
-      const finalAmount = cat.type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
-  
-      if (addTransaction(finalAmount, note, catId, accountId)) {
-        document.getElementById('qAmount').value = '';
-        document.getElementById('qNote').value = '';
-        updateAccountsView();
-      }
-    });
-  
-    // Кнопка FAB
-    document.getElementById('openAdd').addEventListener('click', () => {
-      changeTab('accounts');
-      document.getElementById('qAmount').focus();
-    });
-  
-    // Фильтр транзакций
-    document.getElementById('filter').addEventListener('input', updateTxnList);
-  
-    // Переключение периода обзора
-    document.getElementById('summaryPeriodToggle').addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        document.querySelectorAll('#summaryPeriodToggle button').forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        state.currentPeriod = e.target.dataset.period;
-        updateAccountsView();
-        saveState();
-      }
-    });
-  
+    const qAddBtn = document.getElementById('qAdd');
+    if (qAddBtn) {
+      qAddBtn.addEventListener('click', () => {
+        const qAmountEl = document.getElementById('qAmount');
+        const qNoteEl = document.getElementById('qNote');
+        const qCatEl = document.getElementById('qCat');
+        const qAccountEl = document.getElementById('qAccount');
+        
+        const amount = Number(qAmountEl?.value || 0);
+        const note = qNoteEl?.value || '';
+        const catId = qCatEl?.value;
+        const accountId = qAccountEl?.value;
+        
+        if (!amount || !catId || !accountId) return alert('Введите сумму, выберите категорию и счет.');
+        
+        const cat = state.categories.find(c => c.id === catId);
+        const finalAmount = cat?.type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+        
+        if (addTransaction(finalAmount, note, catId, accountId)) {
+          if (qAmountEl) qAmountEl.value = '';
+          if (qNoteEl) qNoteEl.value = '';
+          updateAccountsView();
+        }
+      });
+    }
+
+    // -------------------- FAB КНОПКА --------------------
+    const openAddBtn = document.getElementById('openAdd');
+    if (openAddBtn) {
+      openAddBtn.addEventListener('click', () => {
+        changeTab('accounts');
+        const qAmountEl = document.getElementById('qAmount');
+        if (qAmountEl) qAmountEl.focus();
+      });
+    }
+
+    // -------------------- ФИЛЬТР ТРАНЗАКЦИЙ --------------------
+    const filterEl = document.getElementById('filter');
+    if (filterEl) {
+      filterEl.addEventListener('input', updateTxnList);
+    }
+
+    // -------------------- ПЕРЕКЛЮЧЕНИЕ ПЕРИОДА --------------------
+    const summaryToggleEl = document.getElementById('summaryPeriodToggle');
+    if (summaryToggleEl) {
+      summaryToggleEl.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+          summaryToggleEl.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+          e.target.classList.add('active');
+          state.currentPeriod = e.target.dataset.period;
+          updateAccountsView();
+          updateExpensesView();
+          saveState();
+        }
+      });
+    }
+
     // -------------------- МОДАЛЬНЫЕ ОКНА: ДОЛГИ --------------------
-    document.getElementById('closeDebtModal').addEventListener('click', () => toggleModal('debtModal', false));
-    document.getElementById('closeNewDebtModal').addEventListener('click', () => toggleModal('newDebtModal', false));
-  
-    document.getElementById('newOwedDebtBtn').addEventListener('click', () => {
-      document.getElementById('newDebtTitle').textContent = 'Новый Долг (Мне должны)';
-      document.getElementById('saveNewDebtBtn').setAttribute('data-type', 'owed');
-      toggleModal('newDebtModal', true);
-    });
-  
-    document.getElementById('newMineDebtBtn').addEventListener('click', () => {
-      document.getElementById('newDebtTitle').textContent = 'Новый Долг (Я должен)';
-      document.getElementById('saveNewDebtBtn').setAttribute('data-type', 'mine');
-      toggleModal('newDebtModal', true);
-    });
-  
-    document.getElementById('saveNewDebtBtn').addEventListener('click', (e) => {
-      const type = e.target.dataset.type;
-      const amount = Number(document.getElementById('newDebtAmount').value);
-      const name = document.getElementById('newDebtName').value;
-  
-      if (!amount || !name) return alert('Введите сумму и имя/описание.');
-  
-      const newDebt = {
-        id: uid(),
-        name: name,
-        amount: amount,
-        type: type,
-        date: today()
-      };
-      state.debts.push(newDebt);
-      saveState();
-      updateDebtsView();
-      toggleModal('newDebtModal', false);
-      document.getElementById('newDebtAmount').value = '';
-      document.getElementById('newDebtName').value = '';
-    });
-  
-    // Действия с долгами (Погасить/Получить/Простить)
+    const closeDebtModalEl = document.getElementById('closeDebtModal');
+    if (closeDebtModalEl) {
+      closeDebtModalEl.addEventListener('click', () => toggleModal('debtModal', false));
+    }
+
+    const closeNewDebtModalEl = document.getElementById('closeNewDebtModal');
+    if (closeNewDebtModalEl) {
+      closeNewDebtModalEl.addEventListener('click', () => toggleModal('newDebtModal', false));
+    }
+
+    const newOwedDebtBtnEl = document.getElementById('newOwedDebtBtn');
+    if (newOwedDebtBtnEl) {
+      newOwedDebtBtnEl.addEventListener('click', () => {
+        const titleEl = document.getElementById('newDebtTitle');
+        const saveBtnEl = document.getElementById('saveNewDebtBtn');
+        if (titleEl) titleEl.textContent = 'Новый Долг (Мне должны)';
+        if (saveBtnEl) saveBtnEl.setAttribute('data-type', 'owed');
+        toggleModal('newDebtModal', true);
+      });
+    }
+
+    const newMineDebtBtnEl = document.getElementById('newMineDebtBtn');
+    if (newMineDebtBtnEl) {
+      newMineDebtBtnEl.addEventListener('click', () => {
+        const titleEl = document.getElementById('newDebtTitle');
+        const saveBtnEl = document.getElementById('saveNewDebtBtn');
+        if (titleEl) titleEl.textContent = 'Новый Долг (Я должен)';
+        if (saveBtnEl) saveBtnEl.setAttribute('data-type', 'mine');
+        toggleModal('newDebtModal', true);
+      });
+    }
+
+    const saveNewDebtBtnEl = document.getElementById('saveNewDebtBtn');
+    if (saveNewDebtBtnEl) {
+      saveNewDebtBtnEl.addEventListener('click', (e) => {
+        const type = e.target.getAttribute('data-type');
+        const amountEl = document.getElementById('newDebtAmount');
+        const nameEl = document.getElementById('newDebtName');
+        
+        const amount = Number(amountEl?.value || 0);
+        const name = nameEl?.value || '';
+
+        if (!amount || !name) return alert('Введите сумму и имя/описание.');
+
+        const newDebt = {
+          id: uid(),
+          name: name,
+          amount: amount,
+          type: type,
+          date: today()
+        };
+        state.debts.push(newDebt);
+        saveState();
+        updateDebtsView();
+        toggleModal('newDebtModal', false);
+        if (amountEl) amountEl.value = '';
+        if (nameEl) nameEl.value = '';
+      });
+    }
+
+    // Действия с долгами
     function handleDebtAction(actionType) {
       if (!state.activeDebt) return;
-      const amount = Number(document.getElementById('debtActionAmount').value);
-      const accountId = document.getElementById('debtActionAccount').value;
-      const note = document.getElementById('debtActionName').value;
+      
+      const amountEl = document.getElementById('debtActionAmount');
+      const accountEl = document.getElementById('debtActionAccount');
+      const nameEl = document.getElementById('debtActionName');
+      
+      const amount = Number(amountEl?.value || 0);
+      const accountId = accountEl?.value;
+      const note = nameEl?.value || '';
       
       if (!amount || !accountId) return alert('Введите сумму и выберите счет.');
-  
+
       let txnAmount = 0;
       let catName = '';
-  
-      if (actionType === 'receive') { // Мне должны, и я получаю деньги
+
+      if (actionType === 'receive') {
         txnAmount = Math.min(amount, state.activeDebt.amount);
         state.activeDebt.amount -= txnAmount;
         catName = 'Погашение долга (Вам)';
-      } else if (actionType === 'repay') { // Я должен, и я плачу
+      } else if (actionType === 'repay') {
         txnAmount = -Math.min(amount, state.activeDebt.amount);
-        state.activeDebt.amount -= txnAmount; // -(-X) = +X
+        state.activeDebt.amount -= txnAmount;
         catName = 'Погашение долга (Ваш)';
       } else if (actionType === 'forgive' || actionType === 'askForgive') {
-        state.activeDebt.amount = 0; // Удалить/обнулить
-        // Нет транзакции, т.к. это прощение/удаление
-        saveState(); updateDebtsView(); toggleModal('debtModal', false);
+        state.activeDebt.amount = 0;
+        saveState();
+        updateDebtsView();
+        toggleModal('debtModal', false);
         return;
-      } else { return; }
-  
-      // Найти или создать категорию "Долги"
+      } else {
+        return;
+      }
+
       let debtCat = state.categories.find(c => c.name === 'Долги');
       if (!debtCat) {
         debtCat = { id: uid(), name: 'Долги', type: 'expense', icon: '⚖️' };
         state.categories.push(debtCat);
       }
-  
+
       addTransaction(txnAmount, note || catName, debtCat.id, accountId, today(), state.activeDebt.id);
       saveState();
       updateDebtsView();
       updateAccountsView();
       toggleModal('debtModal', false);
     }
-  
-    document.getElementById('debtReceiveBtn').addEventListener('click', () => handleDebtAction('receive'));
-    document.getElementById('debtForgiveBtn').addEventListener('click', () => handleDebtAction('forgive'));
-    document.getElementById('debtRepayBtn').addEventListener('click', () => handleDebtAction('repay'));
-    document.getElementById('debtAskForgiveBtn').addEventListener('click', () => handleDebtAction('askForgive'));
-  
+
+    const debtReceiveBtnEl = document.getElementById('debtReceiveBtn');
+    if (debtReceiveBtnEl) {
+      debtReceiveBtnEl.addEventListener('click', () => handleDebtAction('receive'));
+    }
+
+    const debtForgiveBtnEl = document.getElementById('debtForgiveBtn');
+    if (debtForgiveBtnEl) {
+      debtForgiveBtnEl.addEventListener('click', () => handleDebtAction('forgive'));
+    }
+
+    const debtRepayBtnEl = document.getElementById('debtRepayBtn');
+    if (debtRepayBtnEl) {
+      debtRepayBtnEl.addEventListener('click', () => handleDebtAction('repay'));
+    }
+
+    const debtAskForgiveBtnEl = document.getElementById('debtAskForgiveBtn');
+    if (debtAskForgiveBtnEl) {
+      debtAskForgiveBtnEl.addEventListener('click', () => handleDebtAction('askForgive'));
+    }
+
     // -------------------- МОДАЛЬНЫЕ ОКНА: НАСТРОЙКИ --------------------
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-      // Обновление списков настроек
-      // Категории
-      const catList = document.getElementById('categoryList');
-      catList.innerHTML = state.categories.map(c => `
-        <div class="card" data-id="${c.id}">
-          <div>${c.icon} ${c.name}</div>
-          <button style="color:var(--accent)">✕</button>
-        </div>
-      `).join('');
-      // Счета
-      const accList = document.getElementById('accountSettingsList');
-      accList.innerHTML = state.accounts.map(a => `
-        <div class="card" data-id="${a.id}">
-          <div>${a.name} (${formatCurrency(a.balance)})</div>
-          <button style="color:var(--accent)">✕</button>
-        </div>
-      `).join('');
-      // Бюджеты (упрощенно)
-      const budList = document.getElementById('budgetSettingsList');
-      budList.innerHTML = state.budgets.map(b => `
-        <div class="card" data-id="${b.id}">
-          <div>${b.name} (${formatCurrency(b.amount)})</div>
-          <button style="color:var(--accent)">✕</button>
-        </div>
-      `).join('');
-  
-      toggleModal('settingsModal', true);
-    });
-    document.getElementById('closeSettings').addEventListener('click', closeAllModals);
-  
-    // Добавить новую категорию
-    document.getElementById('newCatBtn').addEventListener('click', () => {
-      const name = prompt('Введите название категории:');
-      if (name) {
-        const type = confirm('Это Доход (ОК) или Расход (Отмена)?') ? 'income' : 'expense';
-        state.categories.push({ id: uid(), name, type, icon: '💡' });
-        saveState();
-        document.getElementById('settingsBtn').click(); // Переоткрыть модальное окно
-      }
-    });
-  
-    // Удалить элемент из настроек (упрощенно: удаляет из списка, без проверки связанных транзакций)
-    document.getElementById('settingsModal').addEventListener('click', (e) => {
-      if (e.target.textContent === '✕') {
-        const card = e.target.closest('.card');
-        if (!card) return;
-        const id = card.dataset.id;
-  
-        if (card.closest('#categoryList')) state.categories = state.categories.filter(c => c.id !== id);
-        else if (card.closest('#accountSettingsList')) state.accounts = state.accounts.filter(a => a.id !== id);
-        else if (card.closest('#budgetSettingsList')) state.budgets = state.budgets.filter(b => b.id !== id);
-  
-        saveState();
-        document.getElementById('settingsBtn').click();
-      }
-    });
-  
-    // Добавить новый счет (упрощенно)
-    document.getElementById('newAccBtn').addEventListener('click', () => {
-      const name = prompt('Введите название счета:');
-      const balance = Number(prompt('Введите начальный баланс (0):') || 0);
-      if (name) {
-        state.accounts.push({ id: uid(), name, balance, initial: balance });
-        saveState();
-        document.getElementById('settingsBtn').click();
-      }
-    });
-  
-    // Добавить новый бюджет (упрощенно)
-    document.getElementById('newBudgetBtn').addEventListener('click', () => {
-      const name = prompt('Введите название бюджета:');
-      const amount = Number(prompt('Введите целевую сумму бюджета:'));
-      const catId = prompt(`Введите ID категории (например, ${state.categories[0]?.id})`); // Упрощенный выбор
-      
-      if (name && amount && catId) {
-        state.budgets.push({ id: uid(), name, amount, catId });
-        saveState();
-        document.getElementById('settingsBtn').click();
-      }
-    });
-  
-    // -------------------- МОДАЛЬНЫЕ ОКНА: ПРАВИЛА (АВТОПЛАТЕЖИ) --------------------
-    document.getElementById('rulesBtn').addEventListener('click', () => {
-      updateRulesList();
-      toggleModal('rulesModal', true);
-    });
-    document.getElementById('closeRules').addEventListener('click', closeAllModals);
-  
-    document.getElementById('newRuleBtn').addEventListener('click', () => {
-      document.getElementById('newRuleForm').style.display = 'block';
-      document.getElementById('newRuleBtn').style.display = 'none';
-      document.getElementById('ruleNextDate').value = today();
-      document.getElementById('ruleName').value = '';
-      document.getElementById('ruleAmount').value = '';
-    });
-  
-    document.getElementById('cancelRuleBtn').addEventListener('click', () => {
-      document.getElementById('newRuleForm').style.display = 'none';
-      document.getElementById('newRuleBtn').style.display = 'block';
-    });
-  
-    document.getElementById('saveRuleBtn').addEventListener('click', () => {
-      const name = document.getElementById('ruleName').value;
-      const amount = Number(document.getElementById('ruleAmount').value);
-      const type = document.getElementById('ruleType').value;
-      const nextDate = document.getElementById('ruleNextDate').value;
-      const frequency = document.getElementById('ruleFrequency').value;
-  
-      if (!name || !amount || !nextDate) return alert('Заполните все поля!');
-  
-      state.rules.push({ id: uid(), name, amount, type, nextDate, frequency, catId: state.categories.find(c => c.type === type)?.id || state.categories[0]?.id });
-      saveState();
-      applyRules(); // Сразу применить новое правило
-      updateRulesList();
-      document.getElementById('cancelRuleBtn').click();
-    });
-  
-    document.getElementById('rulesList').addEventListener('click', (e) => {
-      if (e.target.textContent === '✕') {
-        const card = e.target.closest('.card');
-        state.rules = state.rules.filter(r => r.id !== card.dataset.id);
-        saveState();
+    const settingsBtnEl = document.getElementById('settingsBtn');
+    if (settingsBtnEl) {
+      settingsBtnEl.addEventListener('click', () => {
+        const catListEl = document.getElementById('categoryList');
+        const accListEl = document.getElementById('accountSettingsList');
+        const budListEl = document.getElementById('budgetSettingsList');
+
+        if (catListEl) {
+          catListEl.innerHTML = state.categories.map(c => `
+            <div class="card" data-id="${c.id}">
+              <div>${c.icon} ${c.name}</div>
+              <button style="color:var(--accent)">✕</button>
+            </div>
+          `).join('');
+        }
+
+        if (accListEl) {
+          accListEl.innerHTML = state.accounts.map(a => `
+            <div class="card" data-id="${a.id}">
+              <div>${a.name} (${formatCurrency(a.balance)})</div>
+              <button style="color:var(--accent)">✕</button>
+            </div>
+          `).join('');
+        }
+
+        if (budListEl) {
+          budListEl.innerHTML = state.budgets.map(b => `
+            <div class="card" data-id="${b.id}">
+              <div>${b.name} (${formatCurrency(b.amount)})</div>
+              <button style="color:var(--accent)">✕</button>
+            </div>
+          `).join('');
+        }
+
+        toggleModal('settingsModal', true);
+      });
+    }
+
+    const closeSettingsEl = document.getElementById('closeSettings');
+    if (closeSettingsEl) {
+      closeSettingsEl.addEventListener('click', closeAllModals);
+    }
+
+    const newCatBtnEl = document.getElementById('newCatBtn');
+    if (newCatBtnEl) {
+      newCatBtnEl.addEventListener('click', () => {
+        const name = prompt('Введите название категории:');
+        if (name) {
+          const type = confirm('Это Доход (ОК) или Расход (Отмена)?') ? 'income' : 'expense';
+          state.categories.push({ id: uid(), name, type, icon: '💡' });
+          saveState();
+          updateQuickInput();
+          if (settingsBtnEl) settingsBtnEl.click();
+        }
+      });
+    }
+
+    const settingsModalEl = document.getElementById('settingsModal');
+    if (settingsModalEl) {
+      settingsModalEl.addEventListener('click', (e) => {
+        if (e.target.textContent === '✕') {
+          const card = e.target.closest('.card');
+          if (!card) return;
+          const id = card.dataset.id;
+
+          if (card.closest('#categoryList')) {
+            state.categories = state.categories.filter(c => c.id !== id);
+          } else if (card.closest('#accountSettingsList')) {
+            state.accounts = state.accounts.filter(a => a.id !== id);
+          } else if (card.closest('#budgetSettingsList')) {
+            state.budgets = state.budgets.filter(b => b.id !== id);
+          }
+
+          saveState();
+          updateQuickInput();
+          updateAccountsView();
+          if (settingsBtnEl) settingsBtnEl.click();
+        }
+      });
+    }
+
+    const newAccBtnEl = document.getElementById('newAccBtn');
+    if (newAccBtnEl) {
+      newAccBtnEl.addEventListener('click', () => {
+        const name = prompt('Введите название счета:');
+        if (name) {
+          const balance = Number(prompt('Начальный баланс (0):') || 0);
+          state.accounts.push({ id: uid(), name, balance, initial: balance });
+          saveState();
+          updateQuickInput();
+          updateAccountsView();
+          if (settingsBtnEl) settingsBtnEl.click();
+        }
+      });
+    }
+
+    const newBudgetBtnEl = document.getElementById('newBudgetBtn');
+    if (newBudgetBtnEl) {
+      newBudgetBtnEl.addEventListener('click', () => {
+        const name = prompt('Введите название бюджета:');
+        if (name) {
+          const amount = Number(prompt('Целевая сумма:'));
+          const catId = prompt(`ID категории (например, ${state.categories[0]?.id}):`);
+          if (amount && catId) {
+            state.budgets.push({ id: uid(), name, amount, catId });
+            saveState();
+            updateAccountsView();
+            if (settingsBtnEl) settingsBtnEl.click();
+          }
+        }
+      });
+    }
+
+    // -------------------- МОДАЛЬНЫЕ ОКНА: ПРАВИЛА --------------------
+    const rulesBtnEl = document.getElementById('rulesBtn');
+    if (rulesBtnEl) {
+      rulesBtnEl.addEventListener('click', () => {
         updateRulesList();
-      }
-    });
-  
+        toggleModal('rulesModal', true);
+      });
+    }
+
+    const closeRulesEl = document.getElementById('closeRules');
+    if (closeRulesEl) {
+      closeRulesEl.addEventListener('click', closeAllModals);
+    }
+
+    const newRuleBtnEl = document.getElementById('newRuleBtn');
+    if (newRuleBtnEl) {
+      newRuleBtnEl.addEventListener('click', () => {
+        const formEl = document.getElementById('newRuleForm');
+        const nextDateEl = document.getElementById('ruleNextDate');
+        const nameEl = document.getElementById('ruleName');
+        const amountEl = document.getElementById('ruleAmount');
+
+        if (formEl) formEl.style.display = 'block';
+        newRuleBtnEl.style.display = 'none';
+        if (nextDateEl) nextDateEl.value = today();
+        if (nameEl) nameEl.value = '';
+        if (amountEl) amountEl.value = '';
+      });
+    }
+
+    const cancelRuleBtnEl = document.getElementById('cancelRuleBtn');
+    if (cancelRuleBtnEl) {
+      cancelRuleBtnEl.addEventListener('click', () => {
+        const formEl = document.getElementById('newRuleForm');
+        if (formEl) formEl.style.display = 'none';
+        if (newRuleBtnEl) newRuleBtnEl.style.display = 'block';
+      });
+    }
+
+    const saveRuleBtnEl = document.getElementById('saveRuleBtn');
+    if (saveRuleBtnEl) {
+      saveRuleBtnEl.addEventListener('click', () => {
+        const nameEl = document.getElementById('ruleName');
+        const amountEl = document.getElementById('ruleAmount');
+        const typeEl = document.getElementById('ruleType');
+        const nextDateEl = document.getElementById('ruleNextDate');
+        const frequencyEl = document.getElementById('ruleFrequency');
+
+        const name = nameEl?.value || '';
+        const amount = Number(amountEl?.value || 0);
+        const type = typeEl?.value || 'expense';
+        const nextDate = nextDateEl?.value || '';
+        const frequency = frequencyEl?.value || 'monthly';
+
+        if (!name || !amount || !nextDate) return alert('Заполните все поля!');
+
+        state.rules.push({
+          id: uid(),
+          name,
+          amount,
+          type,
+          nextDate,
+          frequency,
+          catId: state.categories.find(c => c.type === type)?.id || state.categories[0]?.id
+        });
+        saveState();
+        applyRules();
+        updateRulesList();
+        if (cancelRuleBtnEl) cancelRuleBtnEl.click();
+      });
+    }
+
+    const rulesListEl = document.getElementById('rulesList');
+    if (rulesListEl) {
+      rulesListEl.addEventListener('click', (e) => {
+        if (e.target.textContent === '✕') {
+          const card = e.target.closest('.card');
+          if (card) {
+            state.rules = state.rules.filter(r => r.id !== card.dataset.id);
+            saveState();
+            updateRulesList();
+          }
+        }
+      });
+    }
+
     function updateRulesList() {
       const rulesList = document.getElementById('rulesList');
+      if (!rulesList) return;
+      
       rulesList.innerHTML = state.rules.map(r => `
         <div class="card" data-id="${r.id}" style="padding:10px; border-color:var(--accent-2);">
           <div>
             <div style="font-weight:bold; color:${r.type === 'expense' ? 'var(--accent)' : 'var(--accent-2)'}">${r.name}</div>
-            <div class="small" style="color:var(--muted)">${r.frequency === 'monthly' ? 'Ежемесячно' : r.frequency === 'weekly' ? 'Еженедельно' : 'Ежегодно'} | След. ${new Date(r.nextDate).toLocaleDateString('ru-RU')}</div>
+            <div class="small" style="color:var(--muted)">${r.frequency === 'monthly' ? 'Ежемесячно' : r.frequency === 'weekly' ? 'Еженедельно' : 'Ежегодно'} | След. ${new Date(r.nextDate + 'T00:00:00').toLocaleDateString('ru-RU')}</div>
           </div>
           <div style="font-size:18px; font-weight:bold; color:${r.type === 'expense' ? 'var(--accent)' : 'var(--accent-2)'}">${r.type === 'expense' ? '−' : '+'}${formatCurrency(r.amount)}</div>
           <button style="color:var(--accent); margin-left:8px;">✕</button>
         </div>
       `).join('') || '<div class="small" style="color:var(--muted); text-align:center;">Нет активных правил.</div>';
     }
-  
+
     // -------------------- МОДАЛЬНЫЕ ОКНА: ЦЕЛИ --------------------
-    document.getElementById('openGoalsBtn').addEventListener('click', () => {
-      updateGoalsSettingsList();
-      toggleModal('goalsModal', true);
-    });
-    document.getElementById('closeGoalsModal').addEventListener('click', closeAllModals);
-  
-    document.getElementById('newGoalBtn').addEventListener('click', () => {
-      document.getElementById('newGoalForm').style.display = 'block';
-      document.getElementById('newGoalBtn').style.display = 'none';
-    });
-    document.getElementById('cancelGoalBtn').addEventListener('click', () => {
-      document.getElementById('newGoalForm').style.display = 'none';
-      document.getElementById('newGoalBtn').style.display = 'block';
-    });
-  
-    document.getElementById('saveGoalBtn').addEventListener('click', () => {
-      const name = document.getElementById('goalName').value;
-      const target = Number(document.getElementById('goalTarget').value);
-      const current = Number(document.getElementById('goalCurrent').value);
-  
-      if (!name || !target) return alert('Заполните название и целевую сумму!');
-  
-      state.goals.push({ id: uid(), name, target, current, date: today() });
-      saveState();
-      updateGoalsSettingsList();
-      updateGoalsList();
-      document.getElementById('cancelGoalBtn').click();
-    });
-  
-    document.getElementById('goalsSettingsList').addEventListener('click', (e) => {
-      if (e.target.textContent === '✕') {
-        const card = e.target.closest('.card');
-        state.goals = state.goals.filter(g => g.id !== card.dataset.id);
+    const openGoalsBtnEl = document.getElementById('openGoalsBtn');
+    if (openGoalsBtnEl) {
+      openGoalsBtnEl.addEventListener('click', () => {
+        updateGoalsSettingsList();
+        toggleModal('goalsModal', true);
+      });
+    }
+
+    const closeGoalsModalEl = document.getElementById('closeGoalsModal');
+    if (closeGoalsModalEl) {
+      closeGoalsModalEl.addEventListener('click', closeAllModals);
+    }
+
+    const newGoalBtnEl = document.getElementById('newGoalBtn');
+    if (newGoalBtnEl) {
+      newGoalBtnEl.addEventListener('click', () => {
+        const formEl = document.getElementById('newGoalForm');
+        if (formEl) formEl.style.display = 'block';
+        newGoalBtnEl.style.display = 'none';
+      });
+    }
+
+    const cancelGoalBtnEl = document.getElementById('cancelGoalBtn');
+    if (cancelGoalBtnEl) {
+      cancelGoalBtnEl.addEventListener('click', () => {
+        const formEl = document.getElementById('newGoalForm');
+        if (formEl) formEl.style.display = 'none';
+        if (newGoalBtnEl) newGoalBtnEl.style.display = 'block';
+      });
+    }
+
+    const saveGoalBtnEl = document.getElementById('saveGoalBtn');
+    if (saveGoalBtnEl) {
+      saveGoalBtnEl.addEventListener('click', () => {
+        const nameEl = document.getElementById('goalName');
+        const targetEl = document.getElementById('goalTarget');
+        const currentEl = document.getElementById('goalCurrent');
+
+        const name = nameEl?.value || '';
+        const target = Number(targetEl?.value || 0);
+        const current = Number(currentEl?.value || 0);
+
+        if (!name || !target) return alert('Заполните название и целевую сумму!');
+
+        state.goals.push({ id: uid(), name, target, current, date: today() });
         saveState();
         updateGoalsSettingsList();
         updateGoalsList();
-      }
-    });
-  
+        if (cancelGoalBtnEl) cancelGoalBtnEl.click();
+      });
+    }
+
+    const goalsSettingsListEl = document.getElementById('goalsSettingsList');
+    if (goalsSettingsListEl) {
+      goalsSettingsListEl.addEventListener('click', (e) => {
+        if (e.target.textContent === '✕') {
+          const card = e.target.closest('.card');
+          if (card) {
+            state.goals = state.goals.filter(g => g.id !== card.dataset.id);
+            saveState();
+            updateGoalsSettingsList();
+            updateGoalsList();
+          }
+        }
+      });
+    }
+
     function updateGoalsSettingsList() {
       const goalsSettingsList = document.getElementById('goalsSettingsList');
+      if (!goalsSettingsList) return;
+      
       goalsSettingsList.innerHTML = state.goals.map(g => {
         const percent = Math.min(100, (g.current / g.target) * 100);
         return `
@@ -1614,9 +2004,14 @@
         `;
       }).join('') || '<div class="small" style="color:var(--muted); text-align:center;">Нет активных целей.</div>';
     }
+
+    // Финальное обновление
+    updateAccountsView();
   });
 })();
 </script>
-</body>
 
+<!-- Плавающая кнопка добавления -->
+<button id="openAdd" class="fab" aria-label="Добавить">+</button>
+</body>
 </html>
