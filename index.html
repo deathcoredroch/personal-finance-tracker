@@ -109,13 +109,17 @@
     #leftCol { order: 1; }
     #centerCol { order: 2; }
   }
-  @media(max-width:767px){ /* Телефоны: 1 колонка - максимальная поддержка */
-    .grid{display:flex;flex-direction:column}
-    /* Порядок на телефоне: Центр (Ввод) -> Лево (Баланс) -> Право (Обзор) */
-    #leftCol { order: 2; }
-    #centerCol { order: 1; }
-    #rightCol { order: 3; }
-    
+  @media(max-width:1100px){
+  .grid{
+    display:flex;
+    flex-direction:column;
+  }
+
+  #rightCol { order: 1; }   /* ОКНО 3 — ПЕРВОЕ */
+  #centerCol { order: 2; }  /* ОКНО 2 — ВТОРОЕ */
+  #leftCol { order: 3; }    /* ОКНО 1 — ПОСЛЕДНЕЕ */
+}
+
     .quick-input > * { min-width: 100%; } /* Поля ввода на всю ширину */
     .top-actions { display:flex; gap:0; }
   }
@@ -238,24 +242,11 @@
   }
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 320px 1fr 320px;
-  gap: 16px;
-  align-items: start;
-}
-
 #leftCol,
 #centerCol,
 #rightCol {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
 }
 
@@ -363,6 +354,44 @@
 @media (max-width: 900px) {
   .overview-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* === Адаптация при зуме и узких контейнерах === */
+@media (max-width: 1100px) {
+  .overview-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-block {
+  min-width: 0;
+}
+
+/* === КОЛОННА ПРИ ЗУМЕ / УЗКОМ ОКНЕ — ФИНАЛ === */
+@media (max-width: 1100px) {
+  .grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ОБРАТНЫЙ ПОРЯДОК ОКОН */
+  #rightCol  { order: 1; }
+  #centerCol { order: 2; }
+  #leftCol   { order: 3; }
+}
+
+
+  #rightCol {
+    order: 1;
+  }
+
+  #centerCol {
+    order: 2;
+  }
+
+  #leftCol {
+    order: 3;
   }
 }
 
@@ -587,7 +616,8 @@
           </div>
         </div>
 
-          <div class="summary-block" style="border-color:var(--goal-color)">
+          <div id="rightCol">
+            <div class="summary-block" style="border-color:var(--goal-color)">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <div style="font-size:18px; font-weight:bold; color:var(--goal-color)">Финансовые Цели</div>
               <button id="openGoalsBtn" title="Редактировать цели" style="border:1px solid var(--goal-color); color:var(--goal-color); padding:5px 10px; font-size:12px;">Управление</button>
@@ -596,6 +626,7 @@
               <div class="small" style="color:var(--muted)">Нет активных целей.</div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -1016,6 +1047,7 @@
       forecastBigEl.textContent = formatCurrency(forecastBalance);
       forecastBigEl.style.color = forecastBalance >= 0 ? 'var(--accent-2)' : 'var(--accent)';
     }
+      updateFinancialSignals();
   }
   
   // Обновление списка транзакций
@@ -1375,25 +1407,37 @@
   }
   
   function updateExpensesView() {
-    const monthKey = getMonthKey(state.currentDate);
-    const monthTxns = state.transactions.filter(t => getMonthKey(t.date) === monthKey && t.amount < 0);
-    const totalExpense = monthTxns.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  
-    const categoryExpenses = monthTxns.reduce((acc, txn) => {
-      const cat = state.categories.find(c => c.id === txn.catId);
-      if (cat && cat.type === 'expense') {
-        acc[cat.name] = acc[cat.name] || { amount: 0, count: 0, catId: cat.id };
-        acc[cat.name].amount += Math.abs(txn.amount);
-        acc[cat.name].count++;
-      }
-      return acc;
-    }, {});
-  
-    // 1. Диаграмма Пончика (Doughnut Chart)
-    const doughnutData = Object.keys(categoryExpenses).map(name => ({
-      label: name,
-      amount: categoryExpenses[name].amount
-    }));
+  const monthKey = getMonthKey(state.currentDate);
+
+  const monthTxns = state.transactions.filter(
+    t => getMonthKey(t.date) === monthKey
+  );
+
+  const categoryExpenses = monthTxns.reduce((acc, txn) => {
+    const cat = state.categories.find(c => c.id === txn.catId);
+    if (!cat) return acc;
+
+    acc[cat.name] = acc[cat.name] || {
+      amount: 0,
+      count: 0,
+      catId: cat.id,
+      type: cat.type
+    };
+
+    acc[cat.name].amount += txn.amount;
+    acc[cat.name].count++;
+
+    return acc;
+  }, {});
+
+  const totalExpense = Object.values(categoryExpenses)
+    .reduce((sum, c) => sum + Math.abs(c.amount), 0);
+
+  // 1. Doughnut
+  const doughnutData = Object.keys(categoryExpenses).map(name => ({
+    label: name,
+    amount: Math.abs(categoryExpenses[name].amount)
+  }));
   
     if (doughnutChart) doughnutChart.destroy();
     const doughnutCanvas = document.getElementById('expenseDoughnutChart');
@@ -1468,7 +1512,10 @@
         row.innerHTML = `
           <td><span class="category-name">${state.categories.find(c => c.id === data.catId)?.icon} ${name}</span></td>
           <td>${data.count}</td>
-          <td><span class="category-amount">−${formatCurrency(data.amount)}</span></td>
+          <td style="color:${data.amount < 0 ? 'var(--accent)' : 'var(--accent-2)'}">
+  ${formatCurrency(data.amount)}
+</td>
+
           <td>${percent}%</td>
         `;
       });
@@ -2008,6 +2055,107 @@
     // Финальное обновление
     updateAccountsView();
   });
+/* ==============================================
+   ФИНАНСОВЫЕ СИГНАЛЫ — ЛОГИКА
+   ============================================== */
+function updateFinancialSignals() {
+  const todayDate = state.currentDate;
+
+  const startDate =
+    state.currentPeriod === 'month'
+      ? getStartOfMonth(todayDate)
+      : getStartOfWeek(todayDate);
+
+  const endDate =
+    state.currentPeriod === 'month'
+      ? getEndOfMonth(todayDate)
+      : getEndOfWeek(todayDate);
+
+  const periodTxns = state.transactions.filter(
+    t => t.date >= startDate && t.date <= endDate && t.amount < 0
+  );
+
+  /* === Самая затратная категория === */
+  const byCategory = {};
+  periodTxns.forEach(t => {
+    byCategory[t.catId] = (byCategory[t.catId] || 0) + Math.abs(t.amount);
+
+  });
+
+  let topCatId = null;
+  let topCatAmount = 0;
+
+  for (const id in byCategory) {
+    if (byCategory[id] > topCatAmount) {
+      topCatAmount = byCategory[id];
+      topCatId = id;
+    }
+  }
+
+  const topCategoryEl = document.getElementById('topCategory');
+  if (topCategoryEl) {
+    if (!topCatId) {
+      topCategoryEl.textContent = '—';
+    } else {
+      const cat = state.categories.find(c => c.id === topCatId);
+      topCategoryEl.textContent =
+        (cat?.icon || '') + ' ' + (cat?.name || '—');
+    }
+  }
+
+  /* === Средний расход в день === */
+  const daysPassed =
+    state.currentPeriod === 'month'
+      ? new Date(todayDate).getDate()
+      : Math.max(1, (new Date(todayDate) - new Date(startDate)) / 86400000 + 1);
+
+  const totalExpense = periodTxns.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const avgDaily = daysPassed > 0 ? totalExpense / daysPassed : 0;
+
+  const avgDailyEl = document.getElementById('avgDailyExpense');
+  if (avgDailyEl) avgDailyEl.textContent = formatCurrency(avgDaily);
+
+  /* === На сколько дней хватит денег === */
+  const balance = state.accounts.reduce((s, a) => s + a.balance, 0);
+  const daysLeft =
+    avgDaily > 0 ? Math.floor(balance / avgDaily) : '∞';
+
+  const daysLeftEl = document.getElementById('daysLeft');
+  if (daysLeftEl) {
+    daysLeftEl.textContent =
+      daysLeft === '∞' ? '∞ дней' : `${daysLeft} дней`;
+  }
+
+  /* === Ближайшее обязательное списание === */
+  const upcomingRule = state.rules
+    .filter(r => r.type === 'expense' && r.nextDate >= todayDate)
+    .sort((a, b) => a.nextDate.localeCompare(b.nextDate))[0];
+
+  const nextRuleEl = document.getElementById('nextRule');
+  if (nextRuleEl) {
+    nextRuleEl.textContent = upcomingRule
+      ? `${upcomingRule.name} −${formatCurrency(upcomingRule.amount)}`
+      : '—';
+  }
+
+  /* === Финансовый статус === */
+  const statusEl = document.getElementById('financeStatus');
+  if (!statusEl) return;
+
+  statusEl.className = 'signals-status';
+
+  if (balance < 0 || daysLeft !== '∞' && daysLeft < 7) {
+    statusEl.textContent = 'Риск';
+    statusEl.classList.add('bad');
+  } else if (daysLeft !== '∞' && daysLeft < 14) {
+    statusEl.textContent = 'Внимание';
+    statusEl.classList.add('warn');
+  } else {
+    statusEl.textContent = 'Норма';
+    statusEl.classList.add('ok');
+  }
+}
+
 })();
 </script>
 
